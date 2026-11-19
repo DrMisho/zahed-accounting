@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>تسجيل الدخول - زاهد للحلول المالية والمحاسبية</title>
+    <title>تسجيل الدخول - زاهد للحلول المحاسبية والمالية</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo-mark.png') }}?v=2">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,8 +13,9 @@
 <body class="font-sans antialiased bg-brand-950 text-slate-100 min-h-screen flex items-center justify-center p-3 sm:p-4 overflow-x-hidden">
     <div class="max-w-md w-full min-w-0 bg-white text-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-2xl">
         <div class="text-center mb-6">
-            @include('layouts.partials.logo-full', ['class' => 'h-24 sm:h-28 w-auto mx-auto object-contain'])
-            <p class="text-xs text-slate-500 mt-2">تسجيل الدخول إلى النظام المحاسبي</p>
+            @include('layouts.partials.logo-mark', ['class' => 'h-20 w-20 mx-auto object-contain'])
+            <h1 class="text-lg font-extrabold text-brand-950 mt-3">زاهد للحلول المحاسبية والمالية</h1>
+            <p class="text-xs text-slate-500 mt-1">تسجيل الدخول إلى النظام المحاسبي</p>
         </div>
 
         @if (session('info'))

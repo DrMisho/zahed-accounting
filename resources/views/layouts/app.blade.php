@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'زاهد للحلول المالية والمحاسبية') }} - @yield('title', 'لوحة التحكم')</title>
+    <title>{{ config('app.name', 'زاهد للحلول المحاسبية والمالية') }} - @yield('title', 'لوحة التحكم')</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo-mark.png') }}?v=2">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,6 +14,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     @include('layouts.partials.theme')
+    @stack('styles')
 </head>
 @php
     $routeName = request()->route()?->getName() ?? '';
@@ -39,12 +40,6 @@
         str_starts_with($routeName, 'admin.') => 'إدارة المنصة',
         default => null,
     };
-
-    $userName = trim(Auth::user()->name ?? 'م');
-    $nameParts = preg_split('/\s+/u', $userName) ?: [];
-    $initials = count($nameParts) >= 2
-        ? mb_substr($nameParts[0], 0, 1) . mb_substr($nameParts[1], 0, 1)
-        : mb_substr($userName, 0, 2);
 @endphp
 <body class="font-sans antialiased bg-[#F4F6FA] text-slate-900 min-h-screen flex overflow-x-hidden">
     <!-- Permanent Collapsible Sidebar -->
@@ -52,13 +47,15 @@
 
     <!-- Main Workspace Area -->
     <div class="flex-1 min-w-0 flex flex-col min-h-screen">
-        <!-- Print-Only Letterhead -->
-        <div class="print-letterhead">
-            <img src="{{ asset('images/logo.png') }}?v=2" alt="زاهد للحلول المالية والمحاسبية">
-            <div class="shop-name">
-                {{ current_shop()->name ?? config('app.name', 'زاهد للحلول المالية والمحاسبية') }}
+        @sectionMissing('custom_print_chrome')
+            <!-- Print-Only Letterhead -->
+            <div class="print-letterhead">
+                <img src="{{ asset('images/logo-mark.png') }}?v=2" alt="زاهد للحلول المحاسبية والمالية">
+                <div class="shop-name">
+                    {{ current_shop()->name ?? config('app.name', 'زاهد للحلول المحاسبية والمالية') }}
+                </div>
             </div>
-        </div>
+        @endif
 
         <!-- Minimal Top Breadcrumb Header -->
         <header class="top-breadcrumb-bar sticky top-0 z-20 px-4 sm:px-6 pt-3 pb-2 bg-[#F4F6FA]/90 backdrop-blur-sm">
@@ -97,14 +94,6 @@
                             @endif
                         @endif
                     </nav>
-                </div>
-
-                <!-- Minimal User Initials Avatar -->
-                <div class="flex items-center shrink-0">
-                    <span title="{{ Auth::user()->name }}"
-                          class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-brand-950 text-white text-xs font-bold tracking-tight select-none">
-                        {{ $initials }}
-                    </span>
                 </div>
             </div>
         </header>
@@ -149,7 +138,7 @@
         <footer class="site-footer bg-white border-t border-slate-200/80 py-4 px-4 sm:px-6 mt-auto text-xs text-slate-500">
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
                 <div class="flex items-center gap-2.5">
-                    <strong class="text-slate-700">زاهد للحلول المالية والمحاسبية</strong>
+                    <strong class="text-slate-700">زاهد للحلول المحاسبية والمالية</strong>
                     <span class="text-slate-300" aria-hidden="true">·</span>
                     <span class="font-mono text-slate-500" dir="ltr">0984393644</span>
                 </div>
@@ -174,7 +163,9 @@
         </footer>
     </div>
 
-    <div class="print-dev-credit">@include('layouts.partials.developer-credit')</div>
+    @sectionMissing('custom_print_chrome')
+        <div class="print-dev-credit">@include('layouts.partials.developer-credit')</div>
+    @endif
     <script>
         document.querySelectorAll('main table').forEach(function (table) {
             if (table.closest('.overflow-x-auto')) return;

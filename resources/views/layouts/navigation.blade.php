@@ -142,7 +142,7 @@
                     @include('layouts.partials.logo-mark', ['class' => 'w-full h-full object-contain'])
                 </span>
                 <div class="sidebar-hide-collapsed flex flex-col min-w-0">
-                    <span class="text-sm font-bold text-white leading-tight truncate">زاهد المحاسبي</span>
+                    <span class="text-[12px] font-bold text-white leading-snug">زاهد للحلول المحاسبية والمالية</span>
                     <span class="text-[11px] text-slate-400 mt-0.5 truncate">{{ $roleTitle }}</span>
                 </div>
             </a>

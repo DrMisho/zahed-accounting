@@ -7,7 +7,7 @@
     <div class="flex items-center justify-between border-b pb-4">
         <div>
             <h1 class="text-xl font-bold text-slate-900">{{ $transaction->shop->name }}</h1>
-            <p class="text-xs text-slate-500">فاتورة تجارية نظامية - زاهد للحلول المالية والمحاسبية</p>
+            <p class="text-xs text-slate-500">فاتورة تجارية نظامية - زاهد للحلول المحاسبية والمالية</p>
         </div>
         <div class="text-left font-mono">
             <div class="text-base font-bold text-brand-800">{{ $transaction->invoice_number }}</div>
