@@ -95,6 +95,8 @@
                         @endif
                     </nav>
                 </div>
+
+                @include('layouts.partials.header-calculator')
             </div>
         </header>
 
