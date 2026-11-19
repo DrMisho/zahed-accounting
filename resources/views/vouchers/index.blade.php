@@ -45,20 +45,29 @@
                     <td class="p-2 font-mono">{{ $r->amount }} {{ $r->currency }}</td>
                     <td class="p-2">{{ $r->affects_balance ? 'يؤثر' : 'توثيق فقط' }}</td>
                     <td class="p-2 whitespace-nowrap">
-                        <button type="button" class="text-brand-800 font-bold" onclick='openVoucherModal(@json([
-                            "id" => $r->id,
-                            "number" => $r->number,
-                            "date" => $r->date->format("Y-m-d"),
-                            "contact_id" => $r->contact_id,
-                            "beneficiary" => $r->beneficiary,
-                            "amount" => $r->amount,
-                            "currency" => $r->currency,
-                            "exchange_rate" => $r->exchange_rate,
-                            "payment_method" => $r->payment_method,
-                            "original_ref" => $r->original_ref,
-                            "description" => $r->description,
-                            "affects_balance" => (bool) $r->affects_balance,
-                        ]))'>تعديل</button>
+                        @php
+    $voucherData = [
+        'id' => $r->id,
+        'number' => $r->number,
+        'date' => $r->date->format('Y-m-d'),
+        'contact_id' => $r->contact_id,
+        'beneficiary' => $r->beneficiary,
+        'amount' => $r->amount,
+        'currency' => $r->currency,
+        'exchange_rate' => $r->exchange_rate,
+        'payment_method' => $r->payment_method,
+        'original_ref' => $r->original_ref,
+        'description' => $r->description,
+        'affects_balance' => (bool) $r->affects_balance,
+    ];
+@endphp
+
+<button type="button"
+        class="text-brand-800 font-bold"
+        data-voucher='@json($voucherData)'
+        onclick="openVoucherModal(JSON.parse(this.dataset.voucher))">
+    تعديل
+</button>
                         ·
                         <a class="text-brand-800" href="{{ route('vouchers.show', $r) }}">عرض</a>
                     </td>
