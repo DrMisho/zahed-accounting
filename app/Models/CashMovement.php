@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\TenantScope;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -50,12 +51,8 @@ class CashMovement extends Model
 
         // 4.أ. احتساب المعادل بالدولار لحركة الصندوق
         static::saving(function ($cm) {
-            if ($cm->currency === 'USD') {
-                $cm->amount_usd = $cm->amount;
-            } else {
-                $rate = $cm->exchange_rate > 0 ? $cm->exchange_rate : 14500;
-                $cm->amount_usd = round($cm->amount / $rate, 2);
-            }
+            $rate = (float) $cm->exchange_rate > 0 ? (float) $cm->exchange_rate : 14500.0;
+            $cm->amount_usd = Money::toUsd((float) $cm->amount, (string) ($cm->currency ?: 'USD'), $rate);
         });
     }
 

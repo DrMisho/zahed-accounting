@@ -8,17 +8,17 @@
                 },
                 colors: {
                     brand: {
-                        50: '#EFF6FF',
-                        100: '#DBEAFE',
-                        200: '#BFDBFE',
-                        300: '#93C5FD',
-                        400: '#60A5FA',
-                        500: '#3B82F6',
-                        600: '#2563EB',
-                        700: '#1D4ED8',
-                        800: '#1D4ED8',
-                        900: '#0F2544',
-                        950: '#0B1A33',
+                        50: '#ECFDF5',
+                        100: '#D1FAE5',
+                        200: '#A7F3D0',
+                        300: '#6EE7B7',
+                        400: '#34D399',
+                        500: '#10B981',
+                        600: '#059669',
+                        700: '#047857',
+                        800: '#065F46',
+                        900: '#064E3B',
+                        950: '#04241D',
                     },
                     gold: {
                         50: '#FFFBEB',
@@ -39,14 +39,14 @@
 </script>
 <style>
     html { -webkit-text-size-adjust: 100%; }
-    body { overflow-x: hidden; background-color: #F4F6FA; }
+    body { overflow-x: hidden; background-color: #F3F6F4; }
     main { min-width: 0; }
     main .overflow-x-auto { -webkit-overflow-scrolling: touch; }
     .font-mono { font-variant-numeric: tabular-nums; }
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
-    .btn-primary { background-color: #1D4ED8; color: #fff; }
-    .btn-primary:hover { background-color: #1E40AF; }
+    .btn-primary { background-color: #059669; color: #fff; }
+    .btn-primary:hover { background-color: #047857; }
 
     /* Sidebar desktop width & smooth collapse */
     #app-sidebar {
@@ -56,8 +56,8 @@
     }
     .sidebar-scroll::-webkit-scrollbar { width: 5px; }
     .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-    .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.22); border-radius: 9999px; }
-    .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(167, 243, 208, 0.22); border-radius: 9999px; }
+    .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(167, 243, 208, 0.4); }
 
     @media (min-width: 1024px) {
         #app-sidebar {
@@ -103,7 +103,7 @@
             border-bottom: 1px solid #e5e7eb;
         }
         .print-letterhead img { height: 72px; width: auto; margin: 0 auto; }
-        .print-letterhead .shop-name { font-size: 13px; font-weight: 700; color: #0F2544; margin-top: 4px; }
+        .print-letterhead .shop-name { font-size: 13px; font-weight: 700; color: #064E3B; margin-top: 4px; }
         .print-dev-credit {
             display: block !important;
             position: fixed;

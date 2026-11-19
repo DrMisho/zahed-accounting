@@ -45,6 +45,10 @@ class CashboxController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->input('contact_id') === '') {
+            $request->merge(['contact_id' => null]);
+        }
+
         $validated = $request->validate([
             'date' => 'required|date',
             'type' => 'required|in:receipt,payment,expense,salary,withdrawal,opening',
@@ -55,6 +59,10 @@ class CashboxController extends Controller
             'exchange_rate' => 'required|numeric|min:1',
             'notes' => 'nullable|string',
         ]);
+
+        $validated['shop_id'] = current_shop_id();
+        $validated['source_type'] = null;
+        $validated['source_id'] = null;
 
         CashMovement::create($validated);
 

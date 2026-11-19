@@ -41,7 +41,7 @@
         default => null,
     };
 @endphp
-<body class="font-sans antialiased bg-[#F4F6FA] text-slate-900 min-h-screen flex overflow-x-hidden">
+<body class="font-sans antialiased bg-[#F3F6F4] text-slate-900 min-h-screen flex overflow-x-hidden">
     <!-- Permanent Collapsible Sidebar -->
     @include('layouts.navigation')
 
@@ -58,7 +58,7 @@
         @endif
 
         <!-- Minimal Top Breadcrumb Header -->
-        <header class="top-breadcrumb-bar sticky top-0 z-20 px-4 sm:px-6 pt-3 pb-2 bg-[#F4F6FA]/90 backdrop-blur-sm">
+        <header class="top-breadcrumb-bar sticky top-0 z-20 px-4 sm:px-6 pt-3 pb-2 bg-[#F3F6F4]/90 backdrop-blur-sm">
             <div class="bg-white border border-slate-200/90 rounded-xl px-4 sm:px-5 h-14 flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
                     <!-- Mobile Menu Button -->

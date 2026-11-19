@@ -16,6 +16,7 @@ use App\Models\ShippingExpense;
 use App\Models\StockTransfer;
 use App\Models\Transaction;
 use App\Models\Voucher;
+use App\Support\Money;
 
 class ControlService
 {
@@ -97,55 +98,104 @@ class ControlService
 
     public function dailyReport(string $shopId, string $date, float $rate): array
     {
-        $txs = Transaction::with(['contact', 'item', 'lines'])
+        $txs = Transaction::withoutGlobalScopes()
+            ->with(['contact', 'item', 'lines'])
             ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $cash = CashMovement::with('contact')
+        $cash = CashMovement::withoutGlobalScopes()
+            ->with('contact')
             ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $withdrawals = PartnerWithdrawal::with('partner')
+        $withdrawals = PartnerWithdrawal::withoutGlobalScopes()
+            ->with('partner')
             ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $salaries = SalaryRecord::with('employee')
+        $salaries = SalaryRecord::withoutGlobalScopes()
+            ->with('employee')
             ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $employeeMovements = EmployeeMovement::with('employee')
+        $employeeMovements = EmployeeMovement::withoutGlobalScopes()
+            ->with('employee')
             ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $expenses = Expense::with('costCenter')
+        $expenses = Expense::withoutGlobalScopes()
+            ->with('costCenter')
             ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $shippings = ShippingExpense::with('transaction')
+        $shippings = ShippingExpense::withoutGlobalScopes()
+            ->with('transaction')
             ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $exchanges = CurrencyExchange::where('shop_id', $shopId)
+        $exchanges = CurrencyExchange::withoutGlobalScopes()
+            ->where('shop_id', $shopId)
             ->whereDate('date', $date)
             ->orderBy('id')
             ->get();
 
-        $linkedTxIds = $cash->where('source_type', 'transaction')->pluck('source_id')->filter()->all();
-        $unlinkedTxs = $txs->reject(fn ($t) => in_array($t->id, $linkedTxIds, true));
+        $safeRate = $rate > 0 ? $rate : 14500.0;
+        $resolveUsd = function ($row, string $amountField = 'amount') use ($safeRate): float {
+            $storedUsd = (float) ($row->amount_usd ?? 0);
+            if ($storedUsd > 0) {
+                return $storedUsd;
+            }
+            $rawAmount = (float) ($row->{$amountField} ?? 0);
+            if ($rawAmount <= 0) {
+                return 0.0;
+            }
+            $rowRate = (float) ($row->exchange_rate ?? 0);
+            return Money::toUsd($rawAmount, (string) ($row->currency ?: 'USD'), $rowRate > 0 ? $rowRate : $safeRate);
+        };
+
+        // Track linked IDs on this date so domain records are never double-counted with their synced cash movements,
+        // while any manual or unlinked cashbox entry (regardless of whether source_type is null or empty) is ALWAYS included.
+        $txIds = $txs->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $withdrawalIds = $withdrawals->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $withdrawalCashIds = $withdrawals->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $expenseIds = $expenses->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $expenseCashIds = $expenses->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $salaryIds = $salaries->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $salaryCashIds = $salaries->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $empMoveIds = $employeeMovements->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $empMoveCashIds = $employeeMovements->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $shippingIds = $shippings->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $shippingCashIds = $shippings->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $exchangeIds = $exchanges->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $exchangeCashIds = $exchanges->pluck('out_cash_movement_id')
+            ->merge($exchanges->pluck('in_cash_movement_id'))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $isLinkedCashMovement = function ($m, string $expectedSource, array $domainIds, array $linkedCashIds): bool {
+            if ($m->id && in_array((int) $m->id, $linkedCashIds, true)) {
+                return true;
+            }
+            return $m->source_type === $expectedSource && $m->source_id && in_array((int) $m->source_id, $domainIds, true);
+        };
+
+        $linkedTxIds = $cash->where('source_type', 'transaction')->pluck('source_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $unlinkedTxs = $txs->reject(fn ($t) => in_array((int) $t->id, $linkedTxIds, true));
 
         $sales = (float) $txs->where('type', 'sale')->sum('total_usd')
             - (float) $txs->where('type', 'sale_return')->sum('total_usd');
@@ -158,7 +208,7 @@ class ControlService
         $receiptsFromCash = (float) $cash
             ->where('type', 'receipt')
             ->reject(fn ($m) => $m->source_type === 'currency_exchange_in')
-            ->sum('amount_usd');
+            ->sum(fn ($m) => $resolveUsd($m));
         $unlinkedCashSalesUsd = (float) $unlinkedTxs
             ->whereIn('type', ['sale', 'purchase_return'])
             ->sum(fn ($t) => (float) ($t->paid_amount_usd ?: ($t->payment_type === 'cash' ? $t->total_usd : 0)));
@@ -167,23 +217,37 @@ class ControlService
         $paymentsFromCash = (float) $cash
             ->where('type', 'payment')
             ->reject(fn ($m) => in_array($m->source_type, ['currency_exchange_out', 'shipping_expense', 'employee_movement'], true))
-            ->sum('amount_usd');
+            ->sum(fn ($m) => $resolveUsd($m));
         $unlinkedCashPurchasesUsd = (float) $unlinkedTxs
             ->whereIn('type', ['purchase', 'sale_return'])
             ->sum(fn ($t) => (float) ($t->paid_amount_usd ?: ($t->payment_type === 'cash' ? $t->total_usd : 0)));
         $payments = $paymentsFromCash + $unlinkedCashPurchasesUsd;
 
-        $manualCashExpensesUsd = (float) $cash->where('type', 'expense')->whereNull('source_type')->sum('amount_usd');
-        $expensesUsd = (float) $expenses->sum('amount_usd') + $manualCashExpensesUsd;
+        $manualCashExpenses = $cash->filter(
+            fn ($m) => $m->type === 'expense' && !$isLinkedCashMovement($m, 'expense', $expenseIds, $expenseCashIds)
+        );
+        $expensesUsd = (float) $expenses->sum(fn ($e) => $resolveUsd($e))
+            + (float) $manualCashExpenses->sum(fn ($m) => $resolveUsd($m));
 
-        $shippingExpensesUsd = (float) $shippings->sum('amount_usd');
+        $shippingExpensesUsd = (float) $shippings->sum(fn ($sh) => $resolveUsd($sh));
 
-        $manualCashWithdrawalsUsd = (float) $cash->where('type', 'withdrawal')->whereNull('source_type')->sum('amount_usd');
-        $partnerWithdrawalsUsd = (float) $withdrawals->sum('amount_usd') + $manualCashWithdrawalsUsd;
+        $manualCashWithdrawals = $cash->filter(
+            fn ($m) => $m->type === 'withdrawal' && !$isLinkedCashMovement($m, 'withdrawal', $withdrawalIds, $withdrawalCashIds)
+        );
+        $partnerWithdrawalsUsd = (float) $withdrawals->sum(fn ($w) => $resolveUsd($w))
+            + (float) $manualCashWithdrawals->sum(fn ($m) => $resolveUsd($m));
+        $partnerWithdrawalsSyp = (float) $withdrawals->where('currency', 'SYP')->sum('amount')
+            + (float) $manualCashWithdrawals->where('currency', 'SYP')->sum('amount');
+        $partnerWithdrawalsCount = $withdrawals->count() + $manualCashWithdrawals->count();
 
-        $manualCashSalariesUsd = (float) $cash->where('type', 'salary')->whereNull('source_type')->sum('amount_usd');
-        $salariesUsd = (float) $salaries->sum('amount_usd') + $manualCashSalariesUsd;
-        $employeeMovementsUsd = (float) $employeeMovements->sum('amount_usd');
+        $manualCashSalaries = $cash->filter(
+            fn ($m) => $m->type === 'salary'
+                && !$isLinkedCashMovement($m, 'salary', $salaryIds, $salaryCashIds)
+                && !$isLinkedCashMovement($m, 'employee_movement', $empMoveIds, $empMoveCashIds)
+        );
+        $salariesUsd = (float) $salaries->sum(fn ($s) => $resolveUsd($s, 'net'))
+            + (float) $manualCashSalaries->sum(fn ($m) => $resolveUsd($m));
+        $employeeMovementsUsd = (float) $employeeMovements->sum(fn ($em) => $resolveUsd($em));
         $employeeTotalUsd = $salariesUsd + $employeeMovementsUsd;
 
         $currencyExchangesUsd = (float) $exchanges->sum('amount_usd');
@@ -238,7 +302,7 @@ class ControlService
                 'direction' => 'out',
                 'amount' => (float) $w->amount,
                 'currency' => $w->currency,
-                'amount_usd' => (float) $w->amount_usd,
+                'amount_usd' => $resolveUsd($w),
                 'url' => route('partners.index'),
             ];
         }
@@ -254,7 +318,7 @@ class ControlService
                 'direction' => 'out',
                 'amount' => (float) $s->net,
                 'currency' => $s->currency,
-                'amount_usd' => (float) $s->amount_usd,
+                'amount_usd' => $resolveUsd($s, 'net'),
                 'url' => route('salaries.index'),
             ];
         }
@@ -270,7 +334,7 @@ class ControlService
                 'direction' => 'out',
                 'amount' => (float) $em->amount,
                 'currency' => $em->currency,
-                'amount_usd' => (float) $em->amount_usd,
+                'amount_usd' => $resolveUsd($em),
                 'url' => route('employee-movements.index'),
             ];
         }
@@ -286,7 +350,7 @@ class ControlService
                 'direction' => 'out',
                 'amount' => (float) $e->amount,
                 'currency' => $e->currency,
-                'amount_usd' => (float) $e->amount_usd,
+                'amount_usd' => $resolveUsd($e),
                 'url' => route('expenses.index'),
             ];
         }
@@ -302,7 +366,7 @@ class ControlService
                 'direction' => 'out',
                 'amount' => (float) $sh->amount,
                 'currency' => $sh->currency,
-                'amount_usd' => (float) $sh->amount_usd,
+                'amount_usd' => $resolveUsd($sh),
                 'url' => route('shipping.index'),
             ];
         }
@@ -323,19 +387,18 @@ class ControlService
             ];
         }
 
-        $handledSources = [
-            'transaction',
-            'expense',
-            'salary',
-            'employee_movement',
-            'withdrawal',
-            'shipping_expense',
-            'currency_exchange_in',
-            'currency_exchange_out',
-        ];
-
         foreach ($cash as $cm) {
-            if ($cm->source_type && in_array($cm->source_type, $handledSources, true)) {
+            $alreadyRepresented =
+                ($cm->source_type === 'transaction' && $cm->source_id && in_array((int) $cm->source_id, $txIds, true))
+                || $isLinkedCashMovement($cm, 'withdrawal', $withdrawalIds, $withdrawalCashIds)
+                || $isLinkedCashMovement($cm, 'expense', $expenseIds, $expenseCashIds)
+                || $isLinkedCashMovement($cm, 'salary', $salaryIds, $salaryCashIds)
+                || $isLinkedCashMovement($cm, 'employee_movement', $empMoveIds, $empMoveCashIds)
+                || $isLinkedCashMovement($cm, 'shipping_expense', $shippingIds, $shippingCashIds)
+                || $isLinkedCashMovement($cm, 'currency_exchange_in', $exchangeIds, $exchangeCashIds)
+                || $isLinkedCashMovement($cm, 'currency_exchange_out', $exchangeIds, $exchangeCashIds);
+
+            if ($alreadyRepresented) {
                 continue;
             }
             $cat = match ($cm->type) {
@@ -355,7 +418,7 @@ class ControlService
                 'payment' => 'سند صرف / صادر صندوق',
                 'expense' => 'مصروف نقدي مباشر',
                 'salary' => 'راتب نقدي مباشر',
-                'withdrawal' => 'مسحوب شريك نقدي مباشر',
+                'withdrawal' => 'مسحوب شريك (سند صندوق)',
                 'opening' => 'رصيد افتتاحي',
                 default => $cm->type,
             };
@@ -364,14 +427,29 @@ class ControlService
                 'category_label' => $catLabel,
                 'type_label' => $typeLabel,
                 'reference' => $cm->voucher_number ?: 'CM-' . $cm->id,
-                'party' => $cm->contact->name ?? $cm->category ?? 'الصندوق',
+                'party' => $cm->contact->name ?? $cm->category ?? ($cm->type === 'withdrawal' ? 'شريك (الصندوق)' : 'الصندوق'),
                 'description' => $cm->notes ?: ($cm->category ?: $typeLabel),
                 'direction' => in_array($cm->type, ['receipt', 'opening'], true) ? 'in' : 'out',
                 'amount' => (float) $cm->amount,
                 'currency' => $cm->currency,
-                'amount_usd' => (float) $cm->amount_usd,
+                'amount_usd' => $resolveUsd($cm),
                 'url' => route('cashbox.index'),
             ];
+        }
+
+        $categoryCounts = [
+            'invoice' => 0,
+            'partner' => 0,
+            'employee' => 0,
+            'expense' => 0,
+            'shipping' => 0,
+            'exchange' => 0,
+            'cashbox' => 0,
+        ];
+        foreach ($movements as $m) {
+            if (isset($categoryCounts[$m['category']])) {
+                $categoryCounts[$m['category']]++;
+            }
         }
 
         return [
@@ -385,6 +463,8 @@ class ControlService
             'expenses_usd' => round($expensesUsd, 2),
             'shipping_expenses_usd' => round($shippingExpensesUsd, 2),
             'partner_withdrawals_usd' => round($partnerWithdrawalsUsd, 2),
+            'partner_withdrawals_syp' => round($partnerWithdrawalsSyp, 2),
+            'partner_withdrawals_count' => $partnerWithdrawalsCount,
             'salaries_usd' => round($salariesUsd, 2),
             'employee_movements_usd' => round($employeeMovementsUsd, 2),
             'employee_total_usd' => round($employeeTotalUsd, 2),
@@ -392,6 +472,7 @@ class ControlService
             'currency_exchanges_count' => $exchanges->count(),
             'operations' => $txs->count(),
             'total_movements' => count($movements),
+            'category_counts' => $categoryCounts,
             'cash_usd' => round($cashUsdIn - $cashUsdOut, 2),
             'cash_syp' => round($cashSypIn - $cashSypOut, 2),
             'movements' => $movements,

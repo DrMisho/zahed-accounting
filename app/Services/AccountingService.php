@@ -468,21 +468,49 @@ class AccountingService
         }
 
         $grossProfitUsd = $netSalesUsd - $cogsUsd;
-        $totalExpensesUsd = (float) Expense::where('shop_id', $shopId)->sum('amount_usd');
-        if ($totalExpensesUsd == 0.0) {
-            $totalExpensesUsd = (float) CashMovement::where('shop_id', $shopId)->where('type', 'expense')->sum('amount_usd');
-        }
-        $totalSalariesUsd = (float) SalaryRecord::where('shop_id', $shopId)->sum('amount_usd');
-        if ($totalSalariesUsd == 0.0) {
-            $totalSalariesUsd = (float) CashMovement::where('shop_id', $shopId)->where('type', 'salary')->sum('amount_usd');
-        }
-        $totalWithdrawalsUsd = (float) PartnerWithdrawal::where('shop_id', $shopId)
+
+        $expenseRows = Expense::withoutGlobalScopes()->where('shop_id', $shopId)->get(['id', 'cash_movement_id', 'amount_usd']);
+        $linkedExpenseIds = $expenseRows->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $linkedExpenseCashIds = $expenseRows->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $manualCashExpensesUsd = (float) CashMovement::withoutGlobalScopes()
+            ->where('shop_id', $shopId)
+            ->where('type', 'expense')
+            ->get(['id', 'source_type', 'source_id', 'amount_usd'])
+            ->reject(fn ($m) => ($m->id && in_array((int) $m->id, $linkedExpenseCashIds, true))
+                || ($m->source_type === 'expense' && $m->source_id && in_array((int) $m->source_id, $linkedExpenseIds, true)))
+            ->sum('amount_usd');
+        $totalExpensesUsd = (float) $expenseRows->sum('amount_usd') + $manualCashExpensesUsd;
+
+        $salaryRows = SalaryRecord::withoutGlobalScopes()->where('shop_id', $shopId)->get(['id', 'cash_movement_id', 'amount_usd']);
+        $linkedSalaryIds = $salaryRows->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $linkedSalaryCashIds = $salaryRows->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $manualCashSalariesUsd = (float) CashMovement::withoutGlobalScopes()
+            ->where('shop_id', $shopId)
+            ->where('type', 'salary')
+            ->get(['id', 'source_type', 'source_id', 'amount_usd'])
+            ->reject(fn ($m) => ($m->id && in_array((int) $m->id, $linkedSalaryCashIds, true))
+                || ($m->source_type === 'salary' && $m->source_id && in_array((int) $m->source_id, $linkedSalaryIds, true))
+                || $m->source_type === 'employee_movement')
+            ->sum('amount_usd');
+        $totalSalariesUsd = (float) $salaryRows->sum('amount_usd') + $manualCashSalariesUsd;
+
+        $allWithdrawals = PartnerWithdrawal::withoutGlobalScopes()
+            ->where('shop_id', $shopId)
+            ->get(['id', 'cash_movement_id', 'classification_status', 'nature', 'amount_usd']);
+        $linkedWithdrawalIds = $allWithdrawals->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $linkedWithdrawalCashIds = $allWithdrawals->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $finalStructuredWithdrawalsUsd = (float) $allWithdrawals
             ->where('classification_status', 'مصنف')
             ->where('nature', 'مسحوب شخصي نهائي')
             ->sum('amount_usd');
-        if ($totalWithdrawalsUsd == 0.0) {
-            $totalWithdrawalsUsd = (float) CashMovement::where('shop_id', $shopId)->where('type', 'withdrawal')->sum('amount_usd');
-        }
+        $manualCashWithdrawalsUsd = (float) CashMovement::withoutGlobalScopes()
+            ->where('shop_id', $shopId)
+            ->where('type', 'withdrawal')
+            ->get(['id', 'source_type', 'source_id', 'amount_usd'])
+            ->reject(fn ($m) => ($m->id && in_array((int) $m->id, $linkedWithdrawalCashIds, true))
+                || ($m->source_type === 'withdrawal' && $m->source_id && in_array((int) $m->source_id, $linkedWithdrawalIds, true)))
+            ->sum('amount_usd');
+        $totalWithdrawalsUsd = $finalStructuredWithdrawalsUsd + $manualCashWithdrawalsUsd;
 
         $operatingCostsUsd = $totalExpensesUsd + $totalSalariesUsd;
         $estimatedNetProfitUsd = $grossProfitUsd - $operatingCostsUsd;

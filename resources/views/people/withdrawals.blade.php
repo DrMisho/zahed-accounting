@@ -33,16 +33,46 @@
     </div>
     <div class="bg-white rounded-2xl border overflow-x-auto">
         <table class="w-full text-xs">
-            <thead class="bg-slate-50"><tr><th class="p-2">التاريخ</th><th class="p-2">الشريك</th><th class="p-2">المبلغ</th><th class="p-2">الطبيعة</th><th class="p-2">التصنيف</th></tr></thead>
-            @foreach($rows as $r)
-                <tr class="border-t text-center">
-                    <td class="p-2 font-mono">{{ $r->date->format('Y-m-d') }}</td>
-                    <td class="p-2">{{ $r->partner->name }}</td>
-                    <td class="p-2 font-mono">{{ $r->amount }} {{ $r->currency }}</td>
-                    <td class="p-2">{{ $r->nature }}</td>
-                    <td class="p-2">{{ $r->classification_status }}</td>
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="p-2.5">التاريخ</th>
+                    <th class="p-2.5">الشريك / المصدر</th>
+                    <th class="p-2.5">المبلغ</th>
+                    <th class="p-2.5">المعادل ($)</th>
+                    <th class="p-2.5">الطبيعة</th>
+                    <th class="p-2.5">التصنيف / الملاحظات</th>
                 </tr>
-            @endforeach
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @foreach($rows as $r)
+                    <tr class="text-center hover:bg-slate-50">
+                        <td class="p-2.5 font-mono">{{ $r->date->format('Y-m-d') }}</td>
+                        <td class="p-2.5 font-medium">{{ $r->partner->name ?? 'شريك' }}</td>
+                        <td class="p-2.5 font-mono font-bold">{{ number_format((float) $r->amount, $r->currency === 'SYP' ? 0 : 2) }} {{ $r->currency }}</td>
+                        <td class="p-2.5 font-mono font-bold text-brand-800">${{ number_format((float) $r->amount_usd, 2) }}</td>
+                        <td class="p-2.5">{{ $r->nature }}</td>
+                        <td class="p-2.5">{{ $r->classification_status }}</td>
+                    </tr>
+                @endforeach
+                @foreach(($manualWithdrawals ?? collect()) as $cm)
+                    <tr class="text-center hover:bg-slate-50 bg-amber-50/40">
+                        <td class="p-2.5 font-mono">{{ $cm->date->format('Y-m-d') }}</td>
+                        <td class="p-2.5 font-medium">
+                            {{ $cm->contact->name ?? $cm->category ?? 'شريك' }}
+                            <span class="mr-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">سند صندوق مباشر</span>
+                        </td>
+                        <td class="p-2.5 font-mono font-bold">{{ number_format((float) $cm->amount, $cm->currency === 'SYP' ? 0 : 2) }} {{ $cm->currency }}</td>
+                        <td class="p-2.5 font-mono font-bold text-brand-800">${{ number_format((float) $cm->amount_usd, 2) }}</td>
+                        <td class="p-2.5">مسحوب شريك (الصندوق)</td>
+                        <td class="p-2.5 text-slate-600">{{ $cm->notes ?: '—' }}</td>
+                    </tr>
+                @endforeach
+                @if($rows->isEmpty() && ($manualWithdrawals ?? collect())->isEmpty())
+                    <tr>
+                        <td colspan="6" class="p-6 text-center text-slate-400">لا توجد مسحوبات شركاء مسجلة بعد.</td>
+                    </tr>
+                @endif
+            </tbody>
         </table>
     </div>
 </div>

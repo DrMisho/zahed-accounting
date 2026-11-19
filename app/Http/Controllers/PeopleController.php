@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashMovement;
 use App\Models\Employee;
 use App\Models\EmployeeMovement;
 use App\Models\Partner;
@@ -104,9 +105,22 @@ class PeopleController extends Controller
 
     public function partners()
     {
+        $rows = PartnerWithdrawal::with('partner')->latest('date')->get();
+        $linkedIds = $rows->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $linkedCashIds = $rows->pluck('cash_movement_id')->filter()->map(fn ($id) => (int) $id)->all();
+
+        $manualWithdrawals = CashMovement::with('contact')
+            ->where('type', 'withdrawal')
+            ->latest('date')
+            ->get()
+            ->reject(fn ($m) => ($m->id && in_array((int) $m->id, $linkedCashIds, true))
+                || ($m->source_type === 'withdrawal' && $m->source_id && in_array((int) $m->source_id, $linkedIds, true)))
+            ->values();
+
         return view('people.withdrawals', [
             'partners' => Partner::orderBy('name')->get(),
-            'rows' => PartnerWithdrawal::with('partner')->latest('date')->get(),
+            'rows' => $rows,
+            'manualWithdrawals' => $manualWithdrawals,
             'shop' => current_shop(),
         ]);
     }
