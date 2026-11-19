@@ -51,6 +51,7 @@
     /* Sidebar desktop width & smooth collapse */
     #app-sidebar {
         width: 260px;
+        max-width: 85vw;
         transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .sidebar-scroll::-webkit-scrollbar { width: 5px; }
@@ -59,10 +60,14 @@
     .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
 
     @media (min-width: 1024px) {
+        #app-sidebar {
+            max-width: none;
+        }
         html.sidebar-collapsed #app-sidebar {
             width: 76px;
         }
-        html.sidebar-collapsed #app-sidebar .sidebar-hide-collapsed {
+        html.sidebar-collapsed #app-sidebar .sidebar-hide-collapsed,
+        html.sidebar-collapsed #app-sidebar .sidebar-group-panel {
             display: none !important;
         }
         html.sidebar-collapsed #app-sidebar .sidebar-divider-collapsed {
@@ -73,11 +78,8 @@
             flex-direction: column;
             gap: 0.5rem;
         }
-        html.sidebar-collapsed #app-sidebar .sidebar-link {
-            justify-content: center;
-            padding-left: 0;
-            padding-right: 0;
-        }
+        html.sidebar-collapsed #app-sidebar .sidebar-link,
+        html.sidebar-collapsed #app-sidebar .sidebar-group-toggle,
         html.sidebar-collapsed #app-sidebar .sidebar-logout-btn {
             justify-content: center;
             padding-left: 0;

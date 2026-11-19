@@ -68,6 +68,8 @@
                     <button type="button"
                             id="sidebar-mobile-open"
                             aria-label="فتح القائمة الجانبية"
+                            aria-controls="app-sidebar"
+                            aria-expanded="false"
                             class="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 shrink-0">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
