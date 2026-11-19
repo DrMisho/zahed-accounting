@@ -123,20 +123,20 @@
         </a>
     </div>
 
-    <!-- Bottom Page Metadata & Footer (Screen + Pinned at Bottom of Printed Page) -->
-    <div class="statement-print-footer-wrap pt-4 space-y-2">
-        <!-- Date & Time on the Bottom Left -->
-        <div class="flex justify-end">
-            <div class="text-xs text-slate-600">
+    <!-- Bottom Page Footer (Screen + Pinned at Bottom of Printed Page) -->
+    <div class="statement-print-footer-wrap pt-4">
+        <div class="border-t border-slate-300 pt-3 flex items-end justify-between gap-4">
+            <!-- Right: Zahed System Name + Phone Number Underneath -->
+            <div class="text-right">
+                <div class="text-xs font-bold text-slate-800">نظام زاهد للحلول المحاسبية والمالية</div>
+                <div class="text-[11px] font-mono text-slate-600 mt-0.5 text-right" dir="ltr">0984393644</div>
+            </div>
+
+            <!-- Left: Date & Time -->
+            <div class="text-left text-xs text-slate-600">
                 <span>التاريخ والوقت: </span>
                 <span class="font-mono font-semibold text-slate-800" dir="ltr">{{ now()->format('Y-m-d H:i') }}</span>
             </div>
-        </div>
-
-        <!-- Bottom Bar: Right = Zahed System, Left = Developer Credit -->
-        <div class="border-t border-slate-300 pt-2.5 flex items-center justify-between gap-4 text-[11px]">
-            <span class="font-bold text-slate-800">نظام زاهد للحلول المحاسبية والمالية</span>
-            <span class="text-slate-500">@include('layouts.partials.developer-credit')</span>
         </div>
     </div>
 </div>
