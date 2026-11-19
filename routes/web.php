@@ -4,12 +4,14 @@ use App\Http\Controllers\AccountingBooksController;
 use App\Http\Controllers\CashboxController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ControlController;
+use App\Http\Controllers\CurrencyExchangeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryExtraController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\ShippingExpenseController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\VoucherController;
@@ -39,6 +41,14 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::get('/expenses', [VoucherController::class, 'expenses'])->name('expenses.index');
     Route::post('/expenses', [VoucherController::class, 'storeExpense'])->name('expenses.store');
+
+    Route::get('/currency-exchanges', [CurrencyExchangeController::class, 'index'])->name('currency-exchanges.index');
+    Route::post('/currency-exchanges', [CurrencyExchangeController::class, 'store'])->name('currency-exchanges.store');
+    Route::delete('/currency-exchanges/{currencyExchange}', [CurrencyExchangeController::class, 'destroy'])->name('currency-exchanges.destroy');
+
+    Route::get('/shipping', [ShippingExpenseController::class, 'index'])->name('shipping.index');
+    Route::post('/shipping', [ShippingExpenseController::class, 'store'])->name('shipping.store');
+    Route::delete('/shipping/{shippingExpense}', [ShippingExpenseController::class, 'destroy'])->name('shipping.destroy');
 
     Route::get('/inventory/sheet', [InventoryExtraController::class, 'sheet'])->name('inventory.sheet');
     Route::get('/inventory/movement', [InventoryExtraController::class, 'movement'])->name('inventory.movement');

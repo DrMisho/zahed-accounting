@@ -50,16 +50,51 @@
         </tbody>
     </table>
 
-    <div class="bg-slate-50 p-4 rounded-2xl space-y-1 text-xs">
+    @php
+        $subtotalDisplay = (float) $transaction->subtotal > 0
+            ? (float) $transaction->subtotal
+            : ((float) $transaction->total + (float) $transaction->discount);
+        $shippingTotalUsd = (float) $transaction->shippingExpenses->sum('amount_usd');
+    @endphp
+
+    <div class="bg-slate-50 p-4 rounded-2xl space-y-1.5 text-xs">
+        @if((float) $transaction->discount > 0)
+            <div class="flex justify-between text-slate-600">
+                <span>المجموع قبل الحسم:</span>
+                <span class="font-mono font-semibold">{{ number_format($subtotalDisplay, $transaction->currency === 'SYP' ? 0 : 2) }} {{ $transaction->currency }}</span>
+            </div>
+            <div class="flex justify-between text-amber-800 font-semibold">
+                <span>(-) {{ $transaction->discountLabel() }}:</span>
+                <span class="font-mono">-{{ number_format((float) $transaction->discount, $transaction->currency === 'SYP' ? 0 : 2) }} {{ $transaction->currency }}</span>
+            </div>
+        @endif
         <div class="flex justify-between">
-            <span>المجموع بالعملة:</span>
-            <span class="font-mono font-bold text-sm">{{ number_format($transaction->total) }} {{ $transaction->currency }}</span>
+            <span>صافي الفاتورة بالعملة:</span>
+            <span class="font-mono font-bold text-sm">{{ number_format((float) $transaction->total, $transaction->currency === 'SYP' ? 0 : 2) }} {{ $transaction->currency }}</span>
         </div>
         <div class="flex justify-between border-t pt-2 font-bold text-brand-800 text-sm">
             <span>المعادل بالدولار (USD):</span>
-            <span class="font-mono text-base">${{ number_format($transaction->total_usd, 2) }}</span>
+            <span class="font-mono text-base">${{ number_format((float) $transaction->total_usd, 2) }}</span>
         </div>
     </div>
+
+    @if($transaction->type === 'purchase' && $transaction->shippingExpenses->count() > 0)
+        <div class="bg-cyan-50/70 border border-cyan-200 p-4 rounded-2xl space-y-2 text-xs">
+            <div class="font-bold text-cyan-900">مصاريف أجور الشحن المرتبطة بتكلفة الشراء</div>
+            <div class="space-y-1 text-slate-700">
+                @foreach($transaction->shippingExpenses as $sh)
+                    <div class="flex justify-between">
+                        <span>{{ $sh->shipping_type }} {{ $sh->carrier_name ? '(' . $sh->carrier_name . ')' : '' }} — {{ $sh->date->format('Y-m-d') }}</span>
+                        <span class="font-mono font-semibold">${{ number_format((float) $sh->amount_usd, 2) }}</span>
+                    </div>
+                @endforeach
+            </div>
+            <div class="flex justify-between border-t border-cyan-200 pt-2 font-bold text-cyan-950">
+                <span>إجمالي تكلفة المشتريات شاملة الشحن:</span>
+                <span class="font-mono">${{ number_format((float) $transaction->total_usd + $shippingTotalUsd, 2) }}</span>
+            </div>
+        </div>
+    @endif
 
     @if($transaction->notes)
         <div class="text-xs text-slate-500 italic">ملاحظات: {{ $transaction->notes }}</div>

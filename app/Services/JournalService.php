@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Account;
 use App\Models\AccountMapping;
+use App\Models\CurrencyExchange;
 use App\Models\JournalEntry;
 use App\Models\JournalLine;
+use App\Models\ShippingExpense;
 use App\Models\Shop;
 use App\Models\Transaction;
 use App\Support\Money;
@@ -48,6 +50,10 @@ class JournalService
         $cur = $tx->currency;
         $amount = (float) $tx->total;
         $amountUsd = (float) $tx->total_usd;
+        $discount = (float) ($tx->discount ?? 0);
+        $discountUsd = (float) ($tx->discount_usd ?? 0);
+        $gross = (float) ($tx->subtotal > 0 ? $tx->subtotal : ($amount + $discount));
+        $grossUsd = (float) ($tx->subtotal_usd > 0 ? $tx->subtotal_usd : ($amountUsd + $discountUsd));
         $paid = (float) $tx->paid_amount;
         $paidUsd = (float) $tx->paid_amount_usd;
         $remainder = max(0, $amount - $paid);
@@ -58,6 +64,8 @@ class JournalService
 
         if (in_array($tx->type, ['sale', 'sale_return'], true)) {
             $salesRole = $tx->type === 'sale_return' ? 'sales_returns' : 'sales';
+            $hasSalesDiscountAccount = $discount > 0 && (bool) $this->accountId($tx->shop_id, 'sales_discount');
+
             if ($tx->type === 'sale') {
                 if ($paid > 0) {
                     $lines[] = [$this->cashRole($cur), $paid, 0, $paidUsd, $desc.' نقداً'];
@@ -65,7 +73,12 @@ class JournalService
                 if ($remainder > 0) {
                     $lines[] = [$this->arRole($cur), $remainder, 0, $remainderUsd, $desc.' آجل'];
                 }
-                $lines[] = [$salesRole, 0, $amount, $amountUsd, $desc];
+                if ($hasSalesDiscountAccount) {
+                    $lines[] = ['sales_discount', $discount, 0, $discountUsd, 'حسم ممنوح - '.$desc];
+                    $lines[] = [$salesRole, 0, $gross, $grossUsd, $desc];
+                } else {
+                    $lines[] = [$salesRole, 0, $amount, $amountUsd, $desc];
+                }
             } else {
                 $lines[] = [$salesRole, $amount, 0, $amountUsd, $desc];
                 if ($paid > 0) {
@@ -89,8 +102,15 @@ class JournalService
         }
 
         if (in_array($tx->type, ['purchase', 'purchase_return'], true)) {
+            $hasPurchaseDiscountAccount = $discount > 0 && (bool) $this->accountId($tx->shop_id, 'purchase_discount');
+
             if ($tx->type === 'purchase') {
-                $lines[] = ['inventory', $amount, 0, $amountUsd, $desc];
+                if ($hasPurchaseDiscountAccount) {
+                    $lines[] = ['inventory', $gross, 0, $grossUsd, $desc];
+                    $lines[] = ['purchase_discount', 0, $discount, $discountUsd, 'حسم مكتسب - '.$desc];
+                } else {
+                    $lines[] = ['inventory', $amount, 0, $amountUsd, $desc];
+                }
                 if ($paid > 0) {
                     $lines[] = [$this->cashRole($cur), 0, $paid, $paidUsd, $desc];
                 }
@@ -109,6 +129,49 @@ class JournalService
         }
 
         $this->write($tx->shop_id, $tx->date->format('Y-m-d'), $tx->invoice_number, 'transaction', $tx->id, $desc, $lines, $cur);
+    }
+
+    public function postCurrencyExchange(CurrencyExchange $exchange): void
+    {
+        $shop = Shop::find($exchange->shop_id);
+        if (!$shop || !$shop->posting_enabled) {
+            return;
+        }
+
+        $usd = (float) $exchange->amount_usd;
+        if ($usd <= 0) {
+            return;
+        }
+
+        $debitRole = $this->cashRole($exchange->to_currency);
+        $creditRole = $this->cashRole($exchange->from_currency);
+        $doc = $exchange->reference_number ?: 'EX-'.$exchange->id;
+        $desc = $exchange->directionLabel();
+
+        $this->forgetSource($exchange->shop_id, 'currency_exchange', $exchange->id);
+        $this->write($exchange->shop_id, $exchange->date->format('Y-m-d'), $doc, 'currency_exchange', $exchange->id, $desc, [
+            [$debitRole, $usd, 0, $usd, $desc],
+            [$creditRole, 0, $usd, $usd, $desc],
+        ], 'USD');
+    }
+
+    public function postShippingExpense(ShippingExpense $shipping): void
+    {
+        $doc = $shipping->voucher_number ?: 'SHP-'.$shipping->id;
+        $desc = 'أجور شحن مشتريات' . ($shipping->transaction ? ' - فاتورة '.$shipping->transaction->invoice_number : '');
+        $this->postSimple(
+            $shipping->shop_id,
+            $shipping->date->format('Y-m-d'),
+            $doc,
+            'shipping_expense',
+            $shipping->id,
+            $desc,
+            'inventory',
+            $this->cashRole($shipping->currency),
+            (float) $shipping->amount,
+            $shipping->currency,
+            (float) $shipping->exchange_rate
+        );
     }
 
     public function postSimple(

@@ -10,6 +10,7 @@ use App\Models\ItemLocationStock;
 use App\Models\Location;
 use App\Models\PartnerWithdrawal;
 use App\Models\SalaryRecord;
+use App\Models\ShippingExpense;
 use App\Models\StockTransfer;
 use App\Models\Transaction;
 use App\Models\TransactionLine;
@@ -25,17 +26,31 @@ class AccountingService
     public function syncTransactionTotals(Transaction $tx): void
     {
         $tx->load('lines');
+        $rate = (float) ($tx->exchange_rate > 0 ? $tx->exchange_rate : 14500);
+
         if ($tx->lines->count() > 0) {
-            $tx->total = round((float) $tx->lines->sum('total'), 2);
-            $tx->total_usd = round((float) $tx->lines->sum('total_usd'), 2);
+            $gross = round((float) $tx->lines->sum('total'), 2);
+            $grossUsd = round((float) $tx->lines->sum('total_usd'), 2);
             $first = $tx->lines->first();
             $tx->item_id = $first->item_id;
             $tx->qty = (float) $tx->lines->sum('qty');
-            $tx->unit_price = $tx->qty > 0 ? round($tx->total / $tx->qty, 2) : 0;
+            $tx->unit_price = $tx->qty > 0 ? round($gross / $tx->qty, 2) : 0;
         } else {
-            $tx->total = (float) $tx->qty * (float) $tx->unit_price;
-            $tx->total_usd = Money::toUsd($tx->total, $tx->currency, (float) $tx->exchange_rate);
+            $gross = round((float) $tx->qty * (float) $tx->unit_price, 2);
+            $grossUsd = Money::toUsd($gross, $tx->currency, $rate);
         }
+
+        $discount = round(max(0, min((float) ($tx->discount ?? 0), $gross)), 2);
+        $discountUsd = Money::toUsd($discount, $tx->currency, $rate);
+        $net = round(max(0, $gross - $discount), 2);
+        $netUsd = Money::toUsd($net, $tx->currency, $rate);
+
+        $tx->subtotal = $gross;
+        $tx->subtotal_usd = $grossUsd;
+        $tx->discount = $discount;
+        $tx->discount_usd = $discountUsd;
+        $tx->total = $net;
+        $tx->total_usd = $netUsd;
 
         $subtype = $tx->operation_subtype ?: ($tx->payment_type === 'cash' ? 'cash' : 'credit');
         $tx->operation_subtype = $subtype;
@@ -53,7 +68,7 @@ class AccountingService
             $tx->paid_amount = min((float) $tx->paid_amount, (float) $tx->total);
         }
 
-        $tx->paid_amount_usd = Money::toUsd((float) $tx->paid_amount, $tx->currency, (float) $tx->exchange_rate);
+        $tx->paid_amount_usd = Money::toUsd((float) $tx->paid_amount, $tx->currency, $rate);
         $tx->saveQuietly();
     }
 
@@ -77,7 +92,16 @@ class AccountingService
             $in = in_array($cm->type, ['opening', 'receipt', 'purchase_return_cash'], true);
             $out = in_array($cm->type, ['payment', 'expense', 'salary', 'withdrawal'], true);
 
-            if ($cm->type === 'opening') {
+            if ($cm->source_type === 'currency_exchange_in') {
+                $summary[$cur]['details']['currency_exchange_in'] += $amount;
+                $summary[$cur]['inflows'] += $amount;
+            } elseif ($cm->source_type === 'currency_exchange_out') {
+                $summary[$cur]['details']['currency_exchange_out'] += $amount;
+                $summary[$cur]['outflows'] += $amount;
+            } elseif ($cm->source_type === 'shipping_expense') {
+                $summary[$cur]['details']['shipping_expenses'] += $amount;
+                $summary[$cur]['outflows'] += $amount;
+            } elseif ($cm->type === 'opening') {
                 $summary[$cur]['details']['opening_balance'] += $amount;
                 $summary[$cur]['inflows'] += $amount;
             } elseif ($cm->type === 'receipt') {
@@ -216,6 +240,7 @@ class AccountingService
     public function getInventoryValuation(string $shopId): array
     {
         $items = Item::where('shop_id', $shopId)->get();
+        $adjustments = $this->itemCostAdjustments($shopId);
         $reports = [];
 
         foreach ($items as $item) {
@@ -233,7 +258,15 @@ class AccountingService
                 ->whereDoesntHave('lines')->sum('total_usd');
 
             $purchasedQty = $qty('purchase') + $headerQty('purchase');
-            $purchasedValUsd = $val('purchase') + $headerVal('purchase');
+            $grossPurchasedValUsd = $val('purchase') + $headerVal('purchase');
+            $purchaseDiscountUsd = $adjustments['purchase_discount'][$item->id] ?? 0.0;
+            $shippingCostUsd = $adjustments['shipping_cost'][$item->id] ?? 0.0;
+            $salesDiscountUsd = $adjustments['sales_discount'][$item->id] ?? 0.0;
+
+            // Net landed purchase value = gross lines - earned purchase discount + linked shipping cost
+            // Note: header-only legacy transactions already store net total_usd, so purchase_discount only applies to lined transactions in adjustments
+            $purchasedValUsd = max(0, $grossPurchasedValUsd - $purchaseDiscountUsd + $shippingCostUsd);
+
             $soldQty = $qty('sale') + $headerQty('sale');
             $salesReturnsQty = $qty('sale_return') + $headerQty('sale_return');
             $purchaseReturnsQty = $qty('purchase_return') + $headerQty('purchase_return');
@@ -246,6 +279,9 @@ class AccountingService
             $wacUsd = $availableQty > 0 ? ($availableValUsd / $availableQty) : $openingCostUsd;
             $currentStock = $availableQty - ($soldQty + $purchaseReturnsQty);
 
+            $netSalesUsd = (($val('sale') + $headerVal('sale')) - $salesDiscountUsd)
+                - ($val('sale_return') + $headerVal('sale_return'));
+
             $reports[] = [
                 'item' => $item,
                 'opening_qty' => $openingQty,
@@ -254,15 +290,108 @@ class AccountingService
                 'sales_return_qty' => $salesReturnsQty,
                 'purchase_return_qty' => $purchaseReturnsQty,
                 'current_stock' => $currentStock,
+                'shipping_cost_usd' => round($shippingCostUsd, 2),
+                'purchase_discount_usd' => round($purchaseDiscountUsd, 2),
                 'wac_usd' => round($wacUsd, 2),
                 'stock_value_usd' => round(max(0, $currentStock * $wacUsd), 2),
                 'is_low_stock' => $currentStock <= (float) $item->alert_limit,
-                'net_sales_usd' => round(($val('sale') + $headerVal('sale')) - ($val('sale_return') + $headerVal('sale_return')), 2),
+                'net_sales_usd' => round($netSalesUsd, 2),
                 'cogs_usd' => round($soldQty * $wacUsd, 2),
             ];
         }
 
         return $reports;
+    }
+
+    private function itemCostAdjustments(string $shopId): array
+    {
+        $purchaseDiscount = [];
+        $shippingCost = [];
+        $salesDiscount = [];
+
+        $purchases = Transaction::with('lines')
+            ->where('shop_id', $shopId)
+            ->where('type', 'purchase')
+            ->get()
+            ->keyBy('id');
+
+        foreach ($purchases as $tx) {
+            if ($tx->lines->count() > 0 && (float) $tx->discount_usd > 0) {
+                $this->allocateAmountToTransaction($tx, (float) $tx->discount_usd, $purchaseDiscount);
+            }
+        }
+
+        $sales = Transaction::with('lines')
+            ->where('shop_id', $shopId)
+            ->where('type', 'sale')
+            ->where('discount_usd', '>', 0)
+            ->get();
+
+        foreach ($sales as $tx) {
+            if ($tx->lines->count() > 0) {
+                $this->allocateAmountToTransaction($tx, (float) $tx->discount_usd, $salesDiscount);
+            }
+        }
+
+        $shippings = ShippingExpense::where('shop_id', $shopId)->get();
+        $unlinkedShippingUsd = 0.0;
+        foreach ($shippings as $ship) {
+            $amtUsd = (float) $ship->amount_usd;
+            if ($amtUsd <= 0) {
+                continue;
+            }
+            if ($ship->transaction_id && $purchases->has($ship->transaction_id)) {
+                $this->allocateAmountToTransaction($purchases->get($ship->transaction_id), $amtUsd, $shippingCost);
+            } else {
+                $unlinkedShippingUsd += $amtUsd;
+            }
+        }
+
+        $unallocatedShippingUsd = 0.0;
+        if ($unlinkedShippingUsd > 0) {
+            $totalPurchasesUsd = (float) $purchases->sum('total_usd');
+            if ($totalPurchasesUsd > 0) {
+                foreach ($purchases as $tx) {
+                    $share = $unlinkedShippingUsd * ((float) $tx->total_usd / $totalPurchasesUsd);
+                    $this->allocateAmountToTransaction($tx, $share, $shippingCost);
+                }
+            } else {
+                $unallocatedShippingUsd = $unlinkedShippingUsd;
+            }
+        }
+
+        return [
+            'purchase_discount' => $purchaseDiscount,
+            'shipping_cost' => $shippingCost,
+            'sales_discount' => $salesDiscount,
+            'unallocated_shipping_usd' => $unallocatedShippingUsd,
+        ];
+    }
+
+    private function allocateAmountToTransaction(Transaction $tx, float $amountUsd, array &$bucket): void
+    {
+        if ($amountUsd <= 0) {
+            return;
+        }
+        if ($tx->lines->count() > 0) {
+            $baseSum = (float) $tx->lines->sum('total_usd');
+            $qtySum = (float) $tx->lines->sum('qty');
+            foreach ($tx->lines as $line) {
+                if ($baseSum > 0) {
+                    $ratio = (float) $line->total_usd / $baseSum;
+                } elseif ($qtySum > 0) {
+                    $ratio = (float) $line->qty / $qtySum;
+                } else {
+                    $ratio = 1 / $tx->lines->count();
+                }
+                $bucket[$line->item_id] = ($bucket[$line->item_id] ?? 0.0) + ($amountUsd * $ratio);
+            }
+            return;
+        }
+
+        if ($tx->item_id) {
+            $bucket[$tx->item_id] = ($bucket[$tx->item_id] ?? 0.0) + $amountUsd;
+        }
     }
 
     public function getLocationInventory(string $shopId): array
@@ -310,6 +439,7 @@ class AccountingService
     public function getProfitAndLossReport(string $shopId): array
     {
         $stockReports = $this->getInventoryValuation($shopId);
+        $adjustments = $this->itemCostAdjustments($shopId);
         $wacMap = [];
         foreach ($stockReports as $sr) {
             $wacMap[$sr['item']->id] = $sr['wac_usd'];
@@ -317,11 +447,19 @@ class AccountingService
 
         $sales = Transaction::with('lines')->where('shop_id', $shopId)->where('type', 'sale')->get();
         $salesReturns = Transaction::with('lines')->where('shop_id', $shopId)->where('type', 'sale_return')->get();
-        $totalSalesUsd = (float) $sales->sum('total_usd');
+        $salesDiscountUsd = (float) $sales->sum('discount_usd');
+        $grossSalesUsd = (float) $sales->sum(function ($s) {
+            return (float) $s->subtotal_usd > 0 ? (float) $s->subtotal_usd : ((float) $s->total_usd + (float) $s->discount_usd);
+        });
         $totalSalesReturnsUsd = (float) $salesReturns->sum('total_usd');
-        $netSalesUsd = $totalSalesUsd - $totalSalesReturnsUsd;
+        $netSalesUsd = $grossSalesUsd - $salesDiscountUsd - $totalSalesReturnsUsd;
 
-        $cogsUsd = 0.0;
+        $purchaseDiscountUsd = (float) Transaction::where('shop_id', $shopId)
+            ->where('type', 'purchase')
+            ->sum('discount_usd');
+        $totalShippingUsd = (float) ShippingExpense::where('shop_id', $shopId)->sum('amount_usd');
+
+        $cogsUsd = $adjustments['unallocated_shipping_usd'] ?? 0.0;
         foreach ($sales as $s) {
             $cogsUsd += $this->cogsOf($s, $wacMap);
         }
@@ -351,7 +489,10 @@ class AccountingService
         $profitMargin = $netSalesUsd > 0 ? ($estimatedNetProfitUsd / $netSalesUsd) * 100 : 0.0;
 
         return [
-            'total_sales_usd' => round($totalSalesUsd, 2),
+            'total_sales_usd' => round($grossSalesUsd, 2),
+            'sales_discount_usd' => round($salesDiscountUsd, 2),
+            'purchase_discount_usd' => round($purchaseDiscountUsd, 2),
+            'total_shipping_usd' => round($totalShippingUsd, 2),
             'total_sales_returns_usd' => round($totalSalesReturnsUsd, 2),
             'net_sales_usd' => round($netSalesUsd, 2),
             'cogs_usd' => round($cogsUsd, 2),
@@ -463,11 +604,14 @@ class AccountingService
                 'cash_sales' => 0.0,
                 'customer_receipts' => 0.0,
                 'opening_balance' => 0.0,
+                'currency_exchange_in' => 0.0,
                 'cash_purchases' => 0.0,
                 'supplier_payments' => 0.0,
                 'expenses' => 0.0,
+                'shipping_expenses' => 0.0,
                 'salaries' => 0.0,
                 'withdrawals' => 0.0,
+                'currency_exchange_out' => 0.0,
             ],
         ];
     }

@@ -54,25 +54,17 @@
                             <td class="py-3.5 px-4 text-left font-mono">${{ number_format($sr['wac_usd'], 2) }}</td>
                             <td class="py-3.5 px-4 text-left font-mono font-bold text-brand-800">${{ number_format($sr['stock_value_usd'], 2) }}</td>
                             <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                @php
-    $itemData = [
-        'id' => $sr['item']->id,
-        'item_name' => $sr['item']->item_name,
-        'code' => $sr['item']->code,
-        'category' => $sr['item']->category,
-        'unit' => $sr['item']->unit,
-        'alert_limit' => $sr['item']->alert_limit,
-        'opening_qty' => $sr['item']->opening_qty,
-        'opening_cost_usd' => $sr['item']->opening_cost_usd,
-    ];
-@endphp
-
-<button type="button"
-        class="px-2 py-1 text-brand-800 hover:bg-brand-50 rounded-lg font-bold"
-        data-item='@json($itemData)'
-        onclick="openItemModal(JSON.parse(this.dataset.item))">
-    تعديل
-</button>
+                                <button type="button" class="px-2 py-1 text-brand-800 hover:bg-brand-50 rounded-lg font-bold"
+                                    onclick='openItemModal(@json([
+                                        "id" => $sr["item"]->id,
+                                        "item_name" => $sr["item"]->item_name,
+                                        "code" => $sr["item"]->code,
+                                        "category" => $sr["item"]->category,
+                                        "unit" => $sr["item"]->unit,
+                                        "alert_limit" => $sr["item"]->alert_limit,
+                                        "opening_qty" => $sr["item"]->opening_qty,
+                                        "opening_cost_usd" => $sr["item"]->opening_cost_usd,
+                                    ]))'>تعديل</button>
                                 <form method="POST" action="{{ route('items.destroy', $sr['item']) }}" onsubmit="return confirm('هل تريد حذف هذا الصنف؟')" class="inline">
                                     @csrf
                                     @method('DELETE')

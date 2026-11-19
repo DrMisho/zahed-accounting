@@ -27,7 +27,8 @@
                         <th class="py-3 px-4">الطرف الثاني</th>
                         <th class="py-3 px-4">الصنف والكمية</th>
                         <th class="py-3 px-4 text-left">السعر الإفرادي</th>
-                        <th class="py-3 px-4 text-left">الإجمالي بالعملة</th>
+                        <th class="py-3 px-4 text-left">الحسم</th>
+                        <th class="py-3 px-4 text-left">الصافي بالعملة</th>
                         <th class="py-3 px-4 text-left">المعادل بالدولار (USD)</th>
                         <th class="py-3 px-4 text-center">الإجراءات</th>
                     </tr>
@@ -50,6 +51,15 @@
                             <td class="py-3 px-4 font-medium">{{ $tx->contact->name ?? '—' }}</td>
                             <td class="py-3 px-4">{{ $tx->item->item_name ?? '—' }} ({{ $tx->qty }})</td>
                             <td class="py-3 px-4 text-left font-mono">{{ number_format($tx->unit_price) }}</td>
+                            <td class="py-3 px-4 text-left font-mono">
+                                @if((float) $tx->discount > 0)
+                                    <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 text-[11px] font-bold">
+                                        {{ $tx->discountLabel() }}: {{ number_format((float) $tx->discount, $tx->currency === 'SYP' ? 0 : 2) }} {{ $tx->currency }}
+                                    </span>
+                                @else
+                                    <span class="text-slate-300">—</span>
+                                @endif
+                            </td>
                             <td class="py-3 px-4 text-left font-mono font-bold">{{ number_format($tx->total) }} {{ $tx->currency }}</td>
                             <td class="py-3 px-4 text-left font-mono font-bold text-brand-800">${{ number_format($tx->total_usd, 2) }}</td>
                             <td class="py-3 px-4 text-center">
@@ -67,7 +77,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="py-8 text-center text-slate-400">لا توجد فواتير مسجلة.</td>
+                            <td colspan="11" class="py-8 text-center text-slate-400">لا توجد فواتير مسجلة.</td>
                         </tr>
                     @endforelse
                 </tbody>

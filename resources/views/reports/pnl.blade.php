@@ -20,8 +20,13 @@
 
     <div class="space-y-3 font-mono text-xs divide-y divide-slate-100">
         <div class="pt-2 flex justify-between text-slate-800">
-            <span class="font-sans font-semibold">إجمالي المبيعات (Gross Sales)</span>
+            <span class="font-sans font-semibold">إجمالي المبيعات قبل الحسم (Gross Sales)</span>
             <span class="font-bold">${{ number_format($pnl['total_sales_usd'], 2) }}</span>
+        </div>
+
+        <div class="pt-2 flex justify-between text-amber-700">
+            <span class="font-sans">(-) حسم ممنوح على المبيعات (Sales Discounts)</span>
+            <span>-${{ number_format($pnl['sales_discount_usd'] ?? 0, 2) }}</span>
         </div>
 
         <div class="pt-2 flex justify-between text-slate-500">
@@ -35,9 +40,16 @@
         </div>
 
         <div class="pt-3 flex justify-between text-rose-700">
-            <span class="font-sans font-semibold">(-) تكلفة البضاعة المباعة (COGS حسب متوسط التكلفة WAC)</span>
+            <span class="font-sans font-semibold">(-) تكلفة البضاعة المباعة (COGS حسب متوسط التكلفة WAC شاملة الشحن وحسم الشراء)</span>
             <span class="font-bold">-${{ number_format($pnl['cogs_usd'], 2) }}</span>
         </div>
+
+        @if(($pnl['total_shipping_usd'] ?? 0) > 0 || ($pnl['purchase_discount_usd'] ?? 0) > 0)
+            <div class="pt-2 flex flex-wrap justify-between gap-2 text-[11px] text-slate-500 bg-slate-50/70 px-3 py-2 rounded-lg">
+                <span class="font-sans">تفاصيل تكلفة المشتريات (مضمّنة في WAC): أجور شحن مشتريات +${{ number_format($pnl['total_shipping_usd'] ?? 0, 2) }}</span>
+                <span class="font-sans">حسم مكتسب على المشتريات -${{ number_format($pnl['purchase_discount_usd'] ?? 0, 2) }}</span>
+            </div>
+        @endif
 
         <div class="pt-2 flex justify-between text-brand-900 font-bold bg-brand-50 p-3 rounded-xl">
             <span class="font-sans">مجمل الربح (Gross Profit)</span>

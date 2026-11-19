@@ -60,6 +60,7 @@ class TransactionController extends Controller
             'contact_id' => 'required|exists:contacts,id',
             'currency' => 'required|in:USD,SYP',
             'exchange_rate' => 'required|numeric|min:1',
+            'discount' => 'nullable|numeric|min:0',
             'paid_amount' => 'nullable|numeric|min:0',
             'location_id' => 'nullable|exists:locations,id',
             'notes' => 'nullable|string',
@@ -80,6 +81,7 @@ class TransactionController extends Controller
             'item_id' => $first['item_id'],
             'qty' => $first['qty'],
             'unit_price' => $first['unit_price'],
+            'discount' => $validated['discount'] ?? 0,
             'currency' => $validated['currency'],
             'exchange_rate' => $validated['exchange_rate'],
             'paid_amount' => $validated['paid_amount'] ?? 0,
@@ -92,7 +94,7 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction)
     {
-        $transaction->load(['contact', 'item', 'shop', 'lines.item']);
+        $transaction->load(['contact', 'item', 'shop', 'lines.item', 'shippingExpenses']);
         return view('transactions.show', ['transaction' => $transaction]);
     }
 

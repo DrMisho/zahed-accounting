@@ -1,12 +1,14 @@
 @php
     $isShopView = Auth::user()->hasRole('shop_manager') || session()->has('impersonated_shop_id');
     $navGroups = $isShopView ? [
-        ['اليومية', request()->routeIs('transactions.*','cashbox.*','vouchers.*','expenses.*'), [
+        ['اليومية', request()->routeIs('transactions.*','cashbox.*','vouchers.*','expenses.*','currency-exchanges.*','shipping.*'), [
             ['transactions.index','الفواتير'],
             ['cashbox.index','حركة الصندوق'],
+            ['currency-exchanges.index','تحويل العملة'],
             ['vouchers.index','سندات القبض', ['type'=>'receipt']],
             ['vouchers.index','سند الصرف', ['type'=>'payment']],
             ['expenses.index','المصاريف العامة'],
+            ['shipping.index','مصاريف أجور الشحن'],
         ]],
         ['المخزون', request()->routeIs('items.*','inventory.*'), [
             ['items.index','دليل الأصناف'],

@@ -9,9 +9,14 @@
             <h1 class="text-xl font-bold text-slate-900">حركة الصندوق التراكمي (SRS 4.ب)</h1>
             <p class="text-xs text-slate-500 mt-1">تتبع الوارد والصادر لكل من صندوق الدولار وصندوق الليرة السورية</p>
         </div>
-        <button onclick="document.getElementById('modal-movement').classList.remove('hidden')" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-brand-800 hover:bg-brand-900 text-white shadow-xs transition-colors self-start sm:self-center">
-            + تسجيل سند صندوق
-        </button>
+        <div class="flex items-center gap-2 self-start sm:self-center">
+            <a href="{{ route('currency-exchanges.index') }}" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-gold-50 hover:bg-gold-100 text-brand-900 border border-gold-300 transition-colors">
+                ⇄ تحويل عملة (SYP / USD)
+            </a>
+            <button onclick="document.getElementById('modal-movement').classList.remove('hidden')" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-brand-800 hover:bg-brand-900 text-white shadow-xs transition-colors">
+                + تسجيل سند صندوق
+            </button>
+        </div>
     </div>
 
     <!-- Dual Balance Cards -->
@@ -79,7 +84,15 @@
                         <tr class="hover:bg-slate-50">
                             <td class="py-3 px-4 font-mono text-slate-500">{{ $cm->date->format('Y-m-d') }}</td>
                             <td class="py-3 px-4 font-bold">
-                                {{ $cm->type === 'receipt' ? 'قبض من عميل' : ($cm->type === 'payment' ? 'صرف لمورد' : ($cm->type === 'expense' ? 'مصروف' : ($cm->type === 'salary' ? 'رواتب' : ($cm->type === 'withdrawal' ? 'مسحوبات شركاء' : 'رصيد افتتاحي')))) }}
+                                @if($cm->source_type === 'currency_exchange_in')
+                                    تحويل عملة (وارد)
+                                @elseif($cm->source_type === 'currency_exchange_out')
+                                    تحويل عملة (صادر)
+                                @elseif($cm->source_type === 'shipping_expense')
+                                    مصاريف أجور شحن
+                                @else
+                                    {{ $cm->type === 'receipt' ? 'قبض من عميل' : ($cm->type === 'payment' ? 'صرف لمورد' : ($cm->type === 'expense' ? 'مصروف' : ($cm->type === 'salary' ? 'رواتب' : ($cm->type === 'withdrawal' ? 'مسحوبات شركاء' : 'رصيد افتتاحي')))) }}
+                                @endif
                             </td>
                             <td class="py-3 px-4 text-slate-600">{{ $cm->contact->name ?? $cm->category ?? '—' }}</td>
                             <td class="py-3 px-4 text-left font-mono font-bold">{{ number_format($cm->amount) }} {{ $cm->currency }}</td>

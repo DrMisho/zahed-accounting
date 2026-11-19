@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\CurrencyExchange;
 use App\Models\EmployeeMovement;
 use App\Models\Expense;
 use App\Models\PartnerWithdrawal;
 use App\Models\SalaryRecord;
+use App\Models\ShippingExpense;
 use App\Models\Transaction;
 use App\Models\TransactionLine;
 use App\Models\Voucher;
@@ -185,6 +187,87 @@ class DocumentPostingService
             $row->update(['cash_movement_id' => null]);
         }
         return $row;
+    }
+
+    public function saveCurrencyExchange(array $data): CurrencyExchange
+    {
+        $row = CurrencyExchange::create($data);
+        $ref = $row->reference_number ?: 'EX-'.$row->id;
+
+        $outCm = $this->cash->sync($row->shop_id, 'currency_exchange_out', $row->id, [
+            'date' => $row->date,
+            'type' => 'payment',
+            'category' => 'تحويل عملة (صادر ' . $row->from_currency . ' ← ' . $row->to_currency . ')',
+            'amount' => $row->from_amount,
+            'currency' => $row->from_currency,
+            'exchange_rate' => $row->exchange_rate,
+            'notes' => trim(($row->notes ? $row->notes . ' — ' : '') . $row->directionLabel()),
+            'voucher_number' => $ref,
+            'affects_balance' => false,
+            'document_ref' => $ref,
+        ]);
+
+        $inCm = $this->cash->sync($row->shop_id, 'currency_exchange_in', $row->id, [
+            'date' => $row->date,
+            'type' => 'receipt',
+            'category' => 'تحويل عملة (وارد ' . $row->to_currency . ' ← ' . $row->from_currency . ')',
+            'amount' => $row->to_amount,
+            'currency' => $row->to_currency,
+            'exchange_rate' => $row->exchange_rate,
+            'notes' => trim(($row->notes ? $row->notes . ' — ' : '') . $row->directionLabel()),
+            'voucher_number' => $ref,
+            'affects_balance' => false,
+            'document_ref' => $ref,
+        ]);
+
+        $row->update([
+            'out_cash_movement_id' => $outCm->id,
+            'in_cash_movement_id' => $inCm->id,
+        ]);
+
+        $this->journal->postCurrencyExchange($row->fresh());
+
+        return $row->fresh();
+    }
+
+    public function destroyCurrencyExchange(CurrencyExchange $exchange): void
+    {
+        $this->cash->forget($exchange->shop_id, 'currency_exchange_out', $exchange->id);
+        $this->cash->forget($exchange->shop_id, 'currency_exchange_in', $exchange->id);
+        $this->journal->forgetSource($exchange->shop_id, 'currency_exchange', $exchange->id);
+        $exchange->delete();
+    }
+
+    public function saveShippingExpense(array $data): ShippingExpense
+    {
+        $row = ShippingExpense::create($data);
+        $row->load('transaction');
+        $invoiceRef = $row->transaction?->invoice_number;
+
+        $cm = $this->cash->sync($row->shop_id, 'shipping_expense', $row->id, [
+            'date' => $row->date,
+            'type' => 'payment',
+            'category' => 'أجور شحن مشتريات' . ($invoiceRef ? ' (' . $invoiceRef . ')' : ''),
+            'amount' => $row->amount,
+            'currency' => $row->currency,
+            'exchange_rate' => $row->exchange_rate,
+            'notes' => $row->description ?: ($row->carrier_name ? 'شحن عبر ' . $row->carrier_name : 'مصاريف أجور شحن'),
+            'voucher_number' => $row->voucher_number ?: 'SHP-' . $row->id,
+            'affects_balance' => false,
+            'document_ref' => $invoiceRef,
+        ]);
+
+        $row->update(['cash_movement_id' => $cm->id]);
+        $this->journal->postShippingExpense($row->fresh('transaction'));
+
+        return $row->fresh('transaction');
+    }
+
+    public function destroyShippingExpense(ShippingExpense $row): void
+    {
+        $this->cash->forget($row->shop_id, 'shipping_expense', $row->id);
+        $this->journal->forgetSource($row->shop_id, 'shipping_expense', $row->id);
+        $row->delete();
     }
 
     public function destroyLinked(string $shopId, string $source, int $id): void
