@@ -1,162 +1,259 @@
 @php
-    $isShopView = Auth::user()->hasRole('shop_manager') || session()->has('impersonated_shop_id');
-    $navGroups = $isShopView ? [
-        ['اليومية', request()->routeIs('transactions.*','cashbox.*','vouchers.*','expenses.*','currency-exchanges.*','shipping.*'), [
-            ['transactions.index','الفواتير'],
-            ['cashbox.index','حركة الصندوق'],
-            ['currency-exchanges.index','تحويل العملة'],
-            ['vouchers.index','سندات القبض', ['type'=>'receipt']],
-            ['vouchers.index','سند الصرف', ['type'=>'payment']],
-            ['expenses.index','المصاريف العامة'],
-            ['shipping.index','مصاريف أجور الشحن'],
-        ]],
-        ['المخزون', request()->routeIs('items.*','inventory.*'), [
-            ['items.index','دليل الأصناف'],
-            ['inventory.sheet','كشف المخزون'],
-            ['inventory.movement','حركة الأصناف'],
-            ['inventory.alerts','تنبيهات المخزون'],
-            ['inventory.locations','مخزون المواقع'],
-            ['inventory.transfers','مناقلات المخزون'],
-        ]],
-        ['الذمم', request()->routeIs('contacts.*','control.collection'), [
-            ['contacts.index','العملاء', ['type'=>'customer']],
-            ['contacts.index','الموردون', ['type'=>'supplier']],
-            ['control.collection','متابعة التحصيل'],
-        ]],
-        ['الموظفون', request()->routeIs('employees.*','salaries.*','employee-movements.*','partners.*'), [
-            ['employees.index','الموظفون'],
-            ['salaries.index','رواتب الموظفين'],
-            ['employee-movements.index','حركة الموظفين'],
-            ['partners.index','مسحوبات الشركاء'],
-        ]],
-        ['المحاسبة', request()->routeIs('books.*','reports.*'), [
-            ['books.accounts','دليل الحسابات'],
-            ['books.ledger','الأستاذ العام'],
-            ['books.trial','ميزان المراجعة'],
-            ['reports.pnl','قائمة الدخل'],
-            ['reports.balance','الميزانية العمومية'],
-            ['reports.profitability','تحليل التكلفة والربحية'],
-            ['books.cost-centers','مراكز التكلفة'],
-        ]],
-        ['الرقابة', request()->routeIs('control.*','settings.*'), [
-            ['control.daily','التقرير اليومي'],
-            ['control.owner','تقرير صاحب العمل'],
-            ['control.kpis','المؤشرات الإدارية'],
-            ['control.cash-close','إغلاق الصندوق'],
-            ['control.match','مطابقة القبض والصرف'],
-            ['settings.edit','إعدادات النظام'],
-        ]],
-    ] : [];
+    $isSuperAdmin = Auth::user()->hasRole('super_admin');
+    $isImpersonating = session()->has('impersonated_shop_id');
+    $isShopView = Auth::user()->hasRole('shop_manager') || $isImpersonating;
+
+    $sidebarSections = [];
+
+    if ($isSuperAdmin && !$isImpersonating) {
+        $sidebarSections[] = [
+            'title' => 'إدارة المنصة',
+            'items' => [
+                ['admin.shops', 'إدارة المحلات', 'shops', [], 'admin.*'],
+                ['settings.edit', 'إعدادات النظام', 'settings', [], 'settings.*'],
+            ],
+        ];
+    } elseif ($isShopView) {
+        if ($isSuperAdmin) {
+            $sidebarSections[] = [
+                'title' => 'المنصة',
+                'items' => [
+                    ['admin.shops', 'إدارة المحلات', 'shops', [], 'admin.*'],
+                ],
+            ];
+        }
+
+        $sidebarSections[] = [
+            'title' => 'الرئيسية',
+            'items' => [
+                ['dashboard', 'لوحة التحكم', 'dashboard', [], 'dashboard'],
+            ],
+        ];
+
+        $sidebarSections[] = [
+            'title' => 'اليومية',
+            'items' => [
+                ['transactions.index', 'الفواتير', 'invoices', [], 'transactions.*'],
+                ['cashbox.index', 'حركة الصندوق', 'cashbox', [], 'cashbox.*'],
+                ['currency-exchanges.index', 'تحويل العملة', 'exchange', [], 'currency-exchanges.*'],
+                ['vouchers.index', 'سندات القبض', 'receipt', ['type' => 'receipt'], 'vouchers.index'],
+                ['vouchers.index', 'سندات الصرف', 'payment', ['type' => 'payment'], 'vouchers.index'],
+                ['expenses.index', 'المصاريف العامة', 'expenses', [], 'expenses.*'],
+                ['shipping.index', 'مصاريف أجور الشحن', 'shipping', [], 'shipping.*'],
+            ],
+        ];
+
+        $sidebarSections[] = [
+            'title' => 'المخزون',
+            'items' => [
+                ['items.index', 'دليل الأصناف', 'items', [], 'items.*'],
+                ['inventory.sheet', 'كشف المخزون', 'inventory-sheet', [], 'inventory.sheet'],
+                ['inventory.movement', 'حركة الأصناف', 'inventory-movement', [], 'inventory.movement'],
+                ['inventory.alerts', 'تنبيهات المخزون', 'alerts', [], 'inventory.alerts'],
+                ['inventory.locations', 'مخزون المواقع', 'locations', [], 'inventory.locations'],
+                ['inventory.transfers', 'مناقلات المخزون', 'transfers', [], 'inventory.transfers'],
+            ],
+        ];
+
+        $sidebarSections[] = [
+            'title' => 'الذمم',
+            'items' => [
+                ['contacts.index', 'العملاء', 'customers', ['type' => 'customer'], 'contacts.index'],
+                ['contacts.index', 'الموردون', 'suppliers', ['type' => 'supplier'], 'contacts.index'],
+                ['control.collection', 'متابعة التحصيل', 'collection', [], 'control.collection'],
+            ],
+        ];
+
+        $sidebarSections[] = [
+            'title' => 'الموظفون والشركاء',
+            'items' => [
+                ['employees.index', 'الموظفون', 'employees', [], 'employees.*'],
+                ['salaries.index', 'رواتب الموظفين', 'salaries', [], 'salaries.*'],
+                ['employee-movements.index', 'حركة الموظفين', 'employee-movements', [], 'employee-movements.*'],
+                ['partners.index', 'مسحوبات الشركاء', 'partners', [], 'partners.*'],
+            ],
+        ];
+
+        $sidebarSections[] = [
+            'title' => 'المحاسبة والتقارير',
+            'items' => [
+                ['books.accounts', 'دليل الحسابات', 'accounts', [], 'books.accounts'],
+                ['books.ledger', 'الأستاذ العام', 'ledger', [], 'books.ledger'],
+                ['books.trial', 'ميزان المراجعة', 'trial', [], 'books.trial'],
+                ['reports.pnl', 'قائمة الدخل', 'pnl', [], 'reports.pnl'],
+                ['reports.balance', 'الميزانية العمومية', 'balance', [], 'reports.balance'],
+                ['reports.profitability', 'تحليل التكلفة والربحية', 'profitability', [], 'reports.profitability'],
+                ['books.cost-centers', 'مراكز التكلفة', 'cost-centers', [], 'books.cost-centers'],
+            ],
+        ];
+
+        $sidebarSections[] = [
+            'title' => 'الرقابة والإعدادات',
+            'items' => [
+                ['control.daily', 'التقرير اليومي', 'daily', [], 'control.daily'],
+                ['control.owner', 'تقرير صاحب العمل', 'owner', [], 'control.owner'],
+                ['control.kpis', 'المؤشرات الإدارية', 'kpis', [], 'control.kpis'],
+                ['control.cash-close', 'إغلاق الصندوق', 'cash-close', [], 'control.cash-close'],
+                ['control.match', 'مطابقة القبض والصرف', 'match', [], 'control.match'],
+                ['settings.edit', 'إعدادات النظام', 'settings', [], 'settings.*'],
+            ],
+        ];
+    }
+
+    $roleTitle = $isSuperAdmin && !$isImpersonating
+        ? 'مدير المنصة'
+        : (current_shop()->name ?? 'مدير المتجر');
 @endphp
 
-<nav class="bg-white border-b-2 border-gold-400 sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-14 sm:h-16 gap-2 min-w-0">
-            <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 min-w-0 shrink">
-                <span class="shrink-0 inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-brand-950 p-0.5 overflow-hidden">
+<!-- Mobile Drawer Backdrop -->
+<div id="sidebar-backdrop" class="hidden fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-[1px] lg:hidden" aria-hidden="true"></div>
+
+<!-- Permanent Collapsible Sidebar -->
+<aside id="app-sidebar"
+       aria-label="القائمة الجانبية"
+       class="fixed inset-y-0 right-0 z-50 lg:sticky lg:top-0 lg:h-screen flex flex-col bg-brand-950 text-slate-300 border-l border-white/10 shrink-0 translate-x-full lg:translate-x-0 select-none">
+
+    <!-- Top Brand Logo + Collapse Toggle -->
+    <div class="px-3.5 pt-4 pb-3 border-b border-white/[0.08]">
+        <div class="sidebar-header-inner flex items-center justify-between gap-2">
+            <a href="{{ $isShopView ? route('dashboard') : route('admin.shops') }}" class="flex items-center gap-2.5 min-w-0">
+                <span class="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white p-1 shadow-sm overflow-hidden">
                     @include('layouts.partials.logo-mark', ['class' => 'w-full h-full object-contain'])
                 </span>
-                <div class="flex flex-col min-w-0">
-                    <span class="text-base sm:text-lg font-bold text-brand-900 leading-none truncate">زاهد للحلول المالية والمحاسبية</span>
-                    <span class="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate max-w-[42vw] sm:max-w-[220px]">
-                        @if(Auth::user()->hasRole('super_admin') && !session()->has('impersonated_shop_id'))
-                            لوحة السوبر أدمن
-                        @else
-                            {{ current_shop()->name ?? 'متجر تجاري' }}
-                        @endif
-                    </span>
+                <div class="sidebar-hide-collapsed flex flex-col min-w-0">
+                    <span class="text-sm font-bold text-white leading-tight truncate">زاهد المحاسبي</span>
+                    <span class="text-[11px] text-slate-400 mt-0.5 truncate">{{ $roleTitle }}</span>
                 </div>
             </a>
 
-            <div class="hidden lg:flex items-center gap-0.5 text-sm font-medium flex-1 overflow-visible">
-                @if(Auth::user()->hasRole('super_admin'))
-                    <a href="{{ route('admin.shops') }}" class="px-3 py-2 rounded-lg {{ request()->routeIs('admin.*') ? 'bg-brand-900 text-gold-300 font-bold' : 'text-slate-600 hover:bg-brand-50' }}">المحلات</a>
-                    <a href="{{ route('settings.edit') }}" class="px-3 py-2 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-brand-900 text-gold-300 font-bold' : 'text-slate-600 hover:bg-brand-50' }}">الإعدادات</a>
-                    @if(session()->has('impersonated_shop_id'))
-                        <form method="POST" action="{{ url('/admin/leave-impersonation') }}" class="inline">
-                            @csrf
-                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-900 text-white">إنهاء تصفح المحل</button>
-                        </form>
-                    @endif
-                @endif
+            <!-- Desktop Collapse Button -->
+            <button type="button"
+                    id="sidebar-collapse-btn"
+                    title="تصغير أو توسيع القائمة"
+                    aria-label="تصغير أو توسيع القائمة الجانبية"
+                    aria-expanded="true"
+                    class="hidden lg:inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-300 hover:text-white transition-colors shrink-0">
+                <svg id="sidebar-collapse-icon" class="w-4 h-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/>
+                </svg>
+            </button>
 
-                @if($isShopView)
-                    <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-lg {{ request()->routeIs('dashboard') ? 'bg-brand-900 text-gold-300 font-bold' : 'text-slate-600 hover:bg-brand-50' }}">الرئيسية</a>
-                    @foreach($navGroups as $group)
-                        @include('layouts.nav-group', ['label' => $group[0], 'active' => $group[1], 'links' => $group[2]])
-                    @endforeach
-                @endif
-            </div>
+            <!-- Mobile Close Button -->
+            <button type="button"
+                    id="sidebar-mobile-close"
+                    aria-label="إغلاق القائمة"
+                    class="lg:hidden inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 hover:text-white">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
 
-            <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
-                @if(current_shop())
-                    <div class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-50 text-gold-800 border border-gold-200 text-xs font-semibold">
-                        <span>1$ = </span>
-                        <span class="font-mono font-bold">{{ number_format(current_shop()->exchange_rate) }}</span>
-                        <span>ل.س</span>
-                    </div>
-                @endif
-                <span class="hidden sm:inline font-bold text-slate-800 text-xs max-w-[120px] truncate">{{ Auth::user()->name }}</span>
-                <form method="POST" action="{{ url('/logout') }}">
+        <!-- Signed-in User Box (matching reference design) -->
+        <div class="sidebar-hide-collapsed mt-3.5 px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+            <div class="text-[10px] font-medium text-slate-400">مسجّل الدخول باسم</div>
+            <div class="text-xs font-bold text-brand-300 mt-0.5 truncate">{{ Auth::user()->name }}</div>
+            @if($isSuperAdmin && $isImpersonating)
+                <form method="POST" action="{{ url('/admin/leave-impersonation') }}" class="mt-2">
                     @csrf
-                    <button type="submit" class="px-2 sm:px-3 py-1.5 rounded-lg text-xs text-rose-600 hover:bg-rose-50 border border-rose-200">خروج</button>
+                    <button type="submit" class="w-full py-1.5 px-2.5 rounded-lg text-[11px] font-semibold bg-brand-600 hover:bg-brand-500 text-white transition-colors">
+                        إنهاء تصفح المحل
+                    </button>
                 </form>
-                <button type="button" id="nav-toggle" class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 text-slate-700" aria-label="فتح القائمة" aria-expanded="false" aria-controls="mobile-nav">
-                    <svg id="nav-icon-open" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                    <svg id="nav-icon-close" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
+            @endif
         </div>
     </div>
 
-    <div id="mobile-nav" class="hidden lg:hidden border-t border-slate-200 bg-white max-h-[min(75vh,32rem)] overflow-y-auto">
-        <div class="px-3 py-3 space-y-1 text-sm">
-            @if(current_shop())
-                <div class="md:hidden mb-2 px-3 py-2 rounded-lg bg-gold-50 text-gold-800 border border-gold-200 text-xs font-semibold">
-                    سعر الصرف: 1$ = <span class="font-mono font-bold">{{ number_format(current_shop()->exchange_rate) }}</span> ل.س
-                </div>
-            @endif
-            <div class="sm:hidden px-3 py-1 text-xs text-slate-500">{{ Auth::user()->name }}</div>
-
-            @if(Auth::user()->hasRole('super_admin'))
-                <a href="{{ route('admin.shops') }}" class="block px-3 py-2.5 rounded-lg {{ request()->routeIs('admin.*') ? 'bg-brand-900 text-gold-300 font-bold' : 'text-slate-700' }}">إدارة المحلات</a>
-                <a href="{{ route('settings.edit') }}" class="block px-3 py-2.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-brand-900 text-gold-300 font-bold' : 'text-slate-700' }}">الإعدادات</a>
-                @if(session()->has('impersonated_shop_id'))
-                    <form method="POST" action="{{ url('/admin/leave-impersonation') }}">
-                        @csrf
-                        <button type="submit" class="w-full text-right px-3 py-2.5 rounded-lg text-white bg-brand-900 font-bold">إنهاء تصفح المحل</button>
-                    </form>
+    <!-- Scrollable Navigation Menu -->
+    <nav class="sidebar-scroll flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
+        @foreach($sidebarSections as $sectionIndex => $section)
+            <div>
+                @if($sectionIndex > 0)
+                    <div class="sidebar-divider-collapsed hidden border-t border-white/10 mx-2 mb-2.5"></div>
                 @endif
-            @endif
+                <div class="sidebar-hide-collapsed px-3 pb-1.5 text-[11px] font-semibold text-slate-500 tracking-wide">
+                    {{ $section['title'] }}
+                </div>
+                <div class="space-y-0.5">
+                    @foreach($section['items'] as $item)
+                        @php
+                            [$routeName, $label, $icon, $params, $pattern] = $item;
+                            $routeMatched = request()->routeIs($pattern);
+                            if ($routeMatched && !empty($params)) {
+                                foreach ($params as $k => $v) {
+                                    $queryVal = request()->query($k);
+                                    if ($routeName === 'vouchers.index' && $queryVal === null) {
+                                        $queryVal = 'receipt';
+                                    }
+                                    if ($queryVal !== $v) {
+                                        $routeMatched = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        @endphp
+                        <a href="{{ route($routeName, $params) }}"
+                           title="{{ $label }}"
+                           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-colors whitespace-nowrap {{ $routeMatched ? 'bg-brand-600 text-white font-semibold shadow-sm shadow-black/20' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white' }}">
+                            @include('layouts.partials.sidebar-icon', ['name' => $icon, 'class' => 'w-[18px] h-[18px] shrink-0 ' . ($routeMatched ? 'text-white' : 'text-slate-400')])
+                            <span class="sidebar-hide-collapsed truncate">{{ $label }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endforeach
+    </nav>
 
-            @if($isShopView)
-                <a href="{{ route('dashboard') }}" class="block px-3 py-2.5 rounded-lg {{ request()->routeIs('dashboard') ? 'bg-brand-900 text-gold-300 font-bold' : 'text-slate-700' }}">الرئيسية</a>
-                @foreach($navGroups as $group)
-                    <details class="rounded-lg" @if($group[1]) open @endif>
-                        <summary class="cursor-pointer px-3 py-2.5 font-bold text-slate-800 {{ $group[1] ? 'bg-brand-50 text-brand-900 rounded-lg' : '' }}">{{ $group[0] }}</summary>
-                        <div class="pr-3 pb-2 space-y-0.5">
-                            @foreach($group[2] as $link)
-                                <a href="{{ route($link[0], $link[2] ?? []) }}" class="block px-3 py-2 rounded-lg text-slate-600 hover:bg-gold-50 hover:text-brand-900">{{ $link[1] }}</a>
-                            @endforeach
-                        </div>
-                    </details>
-                @endforeach
-            @endif
-        </div>
+    <!-- Bottom Sign Out inside Sidebar -->
+    <div class="p-3 border-t border-white/[0.08] mt-auto">
+        <form method="POST" action="{{ url('/logout') }}">
+            @csrf
+            <button type="submit"
+                    title="تسجيل الخروج"
+                    class="sidebar-logout-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-300 hover:bg-rose-500/15 hover:text-rose-300 transition-colors whitespace-nowrap">
+                @include('layouts.partials.sidebar-icon', ['name' => 'logout', 'class' => 'w-[18px] h-[18px] shrink-0'])
+                <span class="sidebar-hide-collapsed">تسجيل الخروج</span>
+            </button>
+        </form>
     </div>
-</nav>
+</aside>
+
 <script>
     (function () {
-        const toggle = document.getElementById('nav-toggle');
-        const menu = document.getElementById('mobile-nav');
-        const openIcon = document.getElementById('nav-icon-open');
-        const closeIcon = document.getElementById('nav-icon-close');
-        if (!toggle || !menu) return;
-        toggle.addEventListener('click', function () {
-            const open = menu.classList.toggle('hidden') === false;
-            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-            openIcon.classList.toggle('hidden', open);
-            closeIcon.classList.toggle('hidden', !open);
-        });
+        const html = document.documentElement;
+        const collapseBtn = document.getElementById('sidebar-collapse-btn');
+        const sidebar = document.getElementById('app-sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        const mobileOpen = document.getElementById('sidebar-mobile-open');
+        const mobileClose = document.getElementById('sidebar-mobile-close');
+
+        if (collapseBtn) {
+            collapseBtn.setAttribute('aria-expanded', html.classList.contains('sidebar-collapsed') ? 'false' : 'true');
+            collapseBtn.addEventListener('click', function () {
+                const collapsed = html.classList.toggle('sidebar-collapsed');
+                collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                try {
+                    localStorage.setItem('zahed_sidebar_collapsed', collapsed ? '1' : '0');
+                } catch (e) {}
+            });
+        }
+
+        function openMobileDrawer() {
+            if (!sidebar || !backdrop) return;
+            sidebar.classList.remove('translate-x-full');
+            backdrop.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeMobileDrawer() {
+            if (!sidebar || !backdrop) return;
+            sidebar.classList.add('translate-x-full');
+            backdrop.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        if (mobileOpen) mobileOpen.addEventListener('click', openMobileDrawer);
+        if (mobileClose) mobileClose.addEventListener('click', closeMobileDrawer);
+        if (backdrop) backdrop.addEventListener('click', closeMobileDrawer);
     })();
 </script>

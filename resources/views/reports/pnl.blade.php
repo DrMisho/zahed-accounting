@@ -14,7 +14,7 @@
         </button>
     </div>
 
-    <div class="p-4 bg-brand-50 rounded-2xl text-xs text-brand-900 leading-relaxed border border-gold-200">
+    <div class="p-4 bg-brand-50 rounded-2xl text-xs text-brand-900 leading-relaxed border border-brand-200">
         <strong>معادلة الوثيقة:</strong> صافي الربح التقديري = (إجمالي المبيعات بالدولار) - (تكلفة البضاعة المباعة COGS بالدولار) - (المصاريف العامة والرواتب بالدولار).
     </div>
 

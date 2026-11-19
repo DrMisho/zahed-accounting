@@ -4,16 +4,16 @@
 
 @section('content')
 <div class="space-y-6">
-    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-xl font-bold text-slate-900">حركة الصندوق التراكمي (SRS 4.ب)</h1>
+            <h1 class="text-xl font-bold text-slate-900">حركة الصندوق التراكمي</h1>
             <p class="text-xs text-slate-500 mt-1">تتبع الوارد والصادر لكل من صندوق الدولار وصندوق الليرة السورية</p>
         </div>
         <div class="flex items-center gap-2 self-start sm:self-center">
-            <a href="{{ route('currency-exchanges.index') }}" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-gold-50 hover:bg-gold-100 text-brand-900 border border-gold-300 transition-colors">
+            <a href="{{ route('currency-exchanges.index') }}" class="px-4 py-2.5 text-xs font-semibold rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 transition-colors">
                 ⇄ تحويل عملة (SYP / USD)
             </a>
-            <button onclick="document.getElementById('modal-movement').classList.remove('hidden')" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-brand-800 hover:bg-brand-900 text-white shadow-xs transition-colors">
+            <button onclick="document.getElementById('modal-movement').classList.remove('hidden')" class="px-4 py-2.5 text-xs font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-colors">
                 + تسجيل سند صندوق
             </button>
         </div>
@@ -121,7 +121,7 @@
 </div>
 
 <!-- Modal Create Movement -->
-<div id="modal-movement" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+<div id="modal-movement" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
         <div class="flex justify-between items-center pb-3 border-b">
             <h2 class="text-base font-bold text-slate-900">تسجيل سند حركة صندوق</h2>

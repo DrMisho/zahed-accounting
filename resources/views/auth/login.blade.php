@@ -11,9 +11,10 @@
     @include('layouts.partials.theme')
 </head>
 <body class="font-sans antialiased bg-brand-950 text-slate-100 min-h-screen flex items-center justify-center p-3 sm:p-4 overflow-x-hidden">
-    <div class="max-w-md w-full min-w-0 bg-white text-slate-900 rounded-3xl p-4 sm:p-8 border-2 border-gold-400">
+    <div class="max-w-md w-full min-w-0 bg-white text-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-2xl">
         <div class="text-center mb-6">
-            @include('layouts.partials.logo-full', ['class' => 'h-28 sm:h-32 w-auto mx-auto object-contain'])
+            @include('layouts.partials.logo-full', ['class' => 'h-24 sm:h-28 w-auto mx-auto object-contain'])
+            <p class="text-xs text-slate-500 mt-2">تسجيل الدخول إلى النظام المحاسبي</p>
         </div>
 
         @if (session('info'))
@@ -23,28 +24,28 @@
         <form method="POST" action="{{ url('/login') }}" class="space-y-4" autocomplete="on">
             @csrf
             <div>
-                <label for="phone" class="block text-xs font-bold text-brand-900 mb-1">رقم الموبايل</label>
+                <label for="phone" class="block text-xs font-semibold text-slate-700 mb-1.5">رقم الموبايل</label>
                 <input id="phone" type="tel" name="phone" value="{{ old('phone') }}" required autofocus dir="ltr" inputmode="numeric"
-                    class="w-full text-sm p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-gold-500 focus:outline-none font-mono">
+                    class="w-full text-sm p-3 rounded-xl border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none font-mono transition-colors">
                 @error('phone')
                     <span class="text-xs text-rose-600 mt-1 block">{{ $message }}</span>
                 @enderror
             </div>
             <div>
-                <label for="password" class="block text-xs font-bold text-brand-900 mb-1">كلمة المرور</label>
+                <label for="password" class="block text-xs font-semibold text-slate-700 mb-1.5">كلمة المرور</label>
                 <input id="password" type="password" name="password" required dir="ltr"
-                    class="w-full text-sm p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-gold-500 focus:outline-none">
+                    class="w-full text-sm p-3 rounded-xl border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-colors">
                 @error('password')
                     <span class="text-xs text-rose-600 mt-1 block">{{ $message }}</span>
                 @enderror
             </div>
             <div class="flex items-center justify-between text-xs pt-1">
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="remember" class="rounded border-slate-300 text-brand-800 focus:ring-gold-500">
+                    <input type="checkbox" name="remember" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
                     <span class="text-slate-600">تذكرني على هذا الجهاز</span>
                 </label>
             </div>
-            <button type="submit" class="w-full py-3 px-4 rounded-xl font-bold text-white bg-brand-900 hover:bg-brand-800 text-sm">
+            <button type="submit" class="w-full py-3 px-4 rounded-xl font-bold text-white bg-brand-600 hover:bg-brand-700 text-sm shadow-sm transition-colors">
                 تسجيل الدخول للنظام
             </button>
         </form>
