@@ -7,24 +7,36 @@
 <style>
     @media print {
         @page {
-            size: A4;
+            size: A4 portrait;
             margin: 0;
         }
-        body {
+        html, body {
+            display: block !important;
+            height: auto !important;
+            min-height: 0 !important;
             background: #ffffff !important;
             padding: 0 !important;
             margin: 0 !important;
+            overflow: visible !important;
+        }
+        body > div {
+            display: block !important;
+            min-height: 0 !important;
+            width: 100% !important;
         }
         main {
+            display: block !important;
             padding: 0 !important;
             margin: 0 !important;
             max-width: none !important;
+            width: 100% !important;
         }
         .statement-sheet {
+            display: block !important;
             max-width: none !important;
             width: 100% !important;
             margin: 0 !important;
-            padding: 14mm 14mm 32mm 14mm !important;
+            padding: 14mm 14mm 30mm 14mm !important;
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -36,12 +48,14 @@
             page-break-inside: avoid;
         }
         .statement-print-footer-wrap {
-            position: fixed;
-            bottom: 8mm;
-            left: 14mm;
-            right: 14mm;
-            background: #ffffff;
-            padding-top: 6px;
+            position: fixed !important;
+            bottom: 10mm !important;
+            left: 14mm !important;
+            right: 14mm !important;
+            margin: 0 !important;
+            padding: 8px 0 0 0 !important;
+            background: #ffffff !important;
+            border-top: 1px solid #cbd5e1 !important;
         }
     }
 </style>
@@ -124,18 +138,20 @@
     </div>
 
     <!-- Bottom Page Footer (Screen + Pinned at Bottom of Printed Page) -->
-    <div class="statement-print-footer-wrap pt-4">
-        <div class="border-t border-slate-300 pt-3 flex items-end justify-between gap-4">
-            <!-- Right: Zahed System Name + Phone Number Underneath -->
-            <div class="text-right">
-                <div class="text-xs font-bold text-slate-800">نظام زاهد للحلول المحاسبية والمالية</div>
-                <div class="text-[11px] font-mono text-slate-600 mt-0.5 text-right" dir="ltr">0984393644</div>
-            </div>
+    <div class="statement-print-footer-wrap border-t border-slate-300 pt-3">
+        <div class="table w-full">
+            <div class="table-row">
+                <!-- Right: Zahed System Name + Phone Number Underneath -->
+                <div class="table-cell align-bottom text-right">
+                    <div class="text-xs font-bold text-slate-800">نظام زاهد للحلول المحاسبية والمالية</div>
+                    <div class="text-[11px] font-mono font-semibold text-slate-700 mt-0.5 text-right" dir="ltr">0984393644</div>
+                </div>
 
-            <!-- Left: Date & Time -->
-            <div class="text-left text-xs text-slate-600">
-                <span>التاريخ والوقت: </span>
-                <span class="font-mono font-semibold text-slate-800" dir="ltr">{{ now()->format('Y-m-d H:i') }}</span>
+                <!-- Left: Date & Time -->
+                <div class="table-cell align-bottom text-left text-xs text-slate-600">
+                    <span>التاريخ والوقت: </span>
+                    <span class="font-mono font-semibold text-slate-800" dir="ltr">{{ now()->format('Y-m-d H:i') }}</span>
+                </div>
             </div>
         </div>
     </div>
