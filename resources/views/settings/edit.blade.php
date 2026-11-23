@@ -10,7 +10,11 @@
             <label class="block">اسم المنشأة<input name="name" value="{{ $shop->name }}" class="mt-1 w-full p-2.5 rounded-xl border"></label>
             <label class="block">صاحب العمل<input name="owner_name" value="{{ $shop->owner_name }}" class="mt-1 w-full p-2.5 rounded-xl border"></label>
             <label class="block">هاتف المنشأة<input name="phone" value="{{ $shop->phone }}" class="mt-1 w-full p-2.5 rounded-xl border" dir="ltr"></label>
-            <label class="block">سعر صرف الدولار<input name="exchange_rate" type="number" value="{{ $shop->exchange_rate }}" class="mt-1 w-full p-2.5 rounded-xl border font-mono"></label>
+            <div class="p-3 rounded-xl bg-brand-50 border border-brand-200 text-brand-900">
+                <div class="font-bold">العملة الأساسية للنظام: الدولار الأمريكي (USD $)</div>
+                <div class="text-[11px] text-brand-800 mt-0.5">تُقيّم جميع العمليات والحسابات الختامية (المتاجرة، الأرباح والخسائر، الميزانية العمومية) بالدولار مع احتساب فروق صرف الليرة السورية تلقائياً عند تغيير سعر الصرف.</div>
+            </div>
+            <label class="block">سعر صرف الدولار المعتمد (ل.س لكل 1$)<input name="exchange_rate" type="number" step="1" min="1" value="{{ $shop->exchange_rate }}" class="mt-1 w-full p-2.5 rounded-xl border font-mono"></label>
             <label class="block">حد تنبيه المخزون الافتراضي<input name="default_alert_limit" type="number" value="{{ $shop->default_alert_limit }}" class="mt-1 w-full p-2.5 rounded-xl border"></label>
             <label class="block">ملاحظات<textarea name="company_notes" class="mt-1 w-full p-2.5 rounded-xl border">{{ $shop->company_notes }}</textarea></label>
 

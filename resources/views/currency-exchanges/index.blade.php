@@ -10,9 +10,14 @@
             <h1 class="text-xl font-bold text-slate-900">تحويل العملة بين الليرة السورية والدولار الأمريكي</h1>
             <p class="text-xs text-slate-500 mt-1">تصريف فوري مع ترحيل تلقائي لصندوقي الدولار والليرة السورية دون التأثير على ذمم العملاء والموردين</p>
         </div>
-        <a href="{{ route('cashbox.index') }}" class="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 self-start sm:self-center">
-            العودة إلى حركة الصندوق
-        </a>
+        <div class="flex flex-wrap items-center gap-2 self-start sm:self-center">
+            <a href="{{ route('reports.fx') }}" class="px-4 py-2 text-xs font-bold rounded-xl border border-brand-300 bg-brand-50 text-brand-800 hover:bg-brand-100">
+                تقرير فروق صرف العملة
+            </a>
+            <a href="{{ route('cashbox.index') }}" class="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50">
+                العودة إلى حركة الصندوق
+            </a>
+        </div>
     </div>
 
     <!-- Live Dual Cashbox Balances -->
@@ -34,6 +39,18 @@
             <span class="text-xs font-semibold text-slate-500">إجمالي المحوّل ($ ← ل.س)</span>
             <div class="text-xl font-bold font-mono text-amber-700 mt-2">{{ number_format($stats['usd_to_syp_syp']) }} <span class="text-xs font-normal">ل.س</span></div>
             <div class="text-[11px] font-mono text-slate-400 mt-0.5">${{ number_format($stats['usd_to_syp_usd'], 2) }}</div>
+        </div>
+    </div>
+
+    @php $totalFxDiff = (float) ($stats['total_fx_diff_usd'] ?? 0); @endphp
+    <div class="p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-2 text-xs {{ $totalFxDiff >= 0 ? 'bg-brand-50 border-brand-200 text-brand-900' : 'bg-rose-50 border-rose-200 text-rose-900' }}">
+        <div>
+            <strong>العملة الأساسية: الدولار الأمريكي (USD)</strong> ·
+            سعر الصرف المعتمد في الإعدادات: <span class="font-mono font-bold" dir="ltr">{{ number_format((float) ($shop->exchange_rate ?? 14500)) }}</span> ل.س
+        </div>
+        <div class="font-bold">
+            صافي فروق الصرف المحققة من التحويلات:
+            <span class="font-mono text-sm mr-1 inline-block" dir="ltr">{{ $totalFxDiff >= 0 ? '+' : '-' }}${{ number_format(abs($totalFxDiff), 2) }}</span>
         </div>
     </div>
 
@@ -123,12 +140,15 @@
                         <th class="py-3 px-4 text-left">المبلغ الصادر</th>
                         <th class="py-3 px-4 text-left">سعر الصرف</th>
                         <th class="py-3 px-4 text-left">المبلغ الوارد</th>
+                        <th class="py-3 px-4 text-left">فرق الصرف $</th>
                         <th class="py-3 px-4">ملاحظات</th>
                         <th class="py-3 px-4 text-center">إجراء</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
+                    @php $refShopRate = (float) ($shop->exchange_rate > 0 ? $shop->exchange_rate : 14500); @endphp
                     @forelse($rows as $r)
+                        @php $rowFx = $r->fxDiffUsd($refShopRate); @endphp
                         <tr class="hover:bg-slate-50">
                             <td class="py-3 px-4 font-mono text-slate-500">{{ $r->date->format('Y-m-d') }}</td>
                             <td class="py-3 px-4 font-mono font-bold text-slate-800">{{ $r->reference_number ?: 'EX-' . $r->id }}</td>
@@ -144,6 +164,9 @@
                             <td class="py-3 px-4 text-left font-mono font-bold text-emerald-700">
                                 +{{ number_format((float) $r->to_amount, $r->to_currency === 'SYP' ? 0 : 2) }} {{ $r->to_currency }}
                             </td>
+                            <td class="py-3 px-4 text-left font-mono font-bold {{ $rowFx > 0 ? 'text-brand-700' : ($rowFx < 0 ? 'text-rose-600' : 'text-slate-400') }}" dir="ltr">
+                                {{ abs($rowFx) >= 0.01 ? (($rowFx > 0 ? '+' : '-') . '$' . number_format(abs($rowFx), 2)) : '$0.00' }}
+                            </td>
                             <td class="py-3 px-4 text-slate-500">{{ $r->notes ?: '—' }}</td>
                             <td class="py-3 px-4 text-center">
                                 <form method="POST" action="{{ route('currency-exchanges.destroy', $r) }}" onsubmit="return confirm('هل تريد حذف عملية التحويل وعكس أثرها على الصندوقين؟')" class="inline">
@@ -155,7 +178,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-8 text-center text-slate-400">لا توجد عمليات تحويل عملة مسجلة بعد.</td>
+                            <td colspan="9" class="py-8 text-center text-slate-400">لا توجد عمليات تحويل عملة مسجلة بعد.</td>
                         </tr>
                     @endforelse
                 </tbody>

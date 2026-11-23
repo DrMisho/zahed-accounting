@@ -60,4 +60,24 @@ class CurrencyExchange extends Model
             ? 'تحويل من ليرة سورية (SYP) إلى دولار (USD)'
             : 'تحويل من دولار (USD) إلى ليرة سورية (SYP)';
     }
+
+    /**
+     * Realized FX gain (+) or loss (-) in base currency (USD) compared to shop base exchange rate.
+     */
+    public function fxDiffUsd(float $referenceRate): float
+    {
+        if ($referenceRate <= 0) {
+            return 0.0;
+        }
+
+        if ($this->direction === 'syp_to_usd') {
+            $bookValueUsd = (float) $this->from_amount / $referenceRate;
+            $actualUsd = (float) $this->to_amount;
+            return round($actualUsd - $bookValueUsd, 2);
+        }
+
+        $paidUsd = (float) $this->from_amount;
+        $receivedValueUsd = (float) $this->to_amount / $referenceRate;
+        return round($receivedValueUsd - $paidUsd, 2);
+    }
 }

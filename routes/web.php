@@ -80,10 +80,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/books/cost-centers', [AccountingBooksController::class, 'storeCostCenter'])->name('books.cost-centers.store');
 
     Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
+        Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
+        Route::get('/customers', [ReportController::class, 'customers'])->name('customers');
+        Route::get('/suppliers', [ReportController::class, 'suppliers'])->name('suppliers');
+        Route::get('/fx-differences', [ReportController::class, 'fxDifferences'])->name('fx');
+        Route::get('/trading', [ReportController::class, 'trading'])->name('trading');
         Route::get('/pnl', [ReportController::class, 'pnl'])->name('pnl');
+        Route::get('/balance', [ReportController::class, 'balanceSheet'])->name('balance');
+        Route::get('/final-accounts', [ReportController::class, 'finalAccounts'])->name('final-accounts');
         Route::get('/stock', [ReportController::class, 'stock'])->name('stock');
         Route::get('/cashflow', [ReportController::class, 'cashflow'])->name('cashflow');
-        Route::get('/balance', [ReportController::class, 'balanceSheet'])->name('balance');
         Route::get('/profitability', [ReportController::class, 'profitability'])->name('profitability');
     });
 

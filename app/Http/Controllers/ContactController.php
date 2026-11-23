@@ -18,23 +18,27 @@ class ContactController extends Controller
 
     public function index(Request $request)
     {
+        $shop = current_shop();
+        $rate = (float) ($shop->exchange_rate ?? 14500);
         $type = $request->get('type', 'customer');
         $contacts = Contact::where('type', $type)->get();
 
         $contactList = [];
         foreach ($contacts as $contact) {
-            $stmt = $this->accountingService->getContactStatement($contact);
+            $stmt = $this->accountingService->getContactStatement($contact, null, null, $rate);
             $contactList[] = [
                 'contact' => $contact,
                 'balance_usd' => $stmt['final_balance_usd'],
                 'balance_syp' => $stmt['final_balance_syp'],
+                'balance_total_usd' => $stmt['final_balance_total_usd'],
+                'syp_fx_diff_usd' => $stmt['syp_fx_diff_usd'],
             ];
         }
 
         return view('contacts.index', [
             'type' => $type,
             'contactList' => $contactList,
-            'shop' => current_shop(),
+            'shop' => $shop,
         ]);
     }
 
@@ -56,13 +60,21 @@ class ContactController extends Controller
             ->with('success', 'تم إضافة جهة الاتصال بنجاح.');
     }
 
-    public function statement(Contact $contact)
+    public function statement(Request $request, Contact $contact)
     {
-        $statement = $this->accountingService->getContactStatement($contact);
+        $shop = current_shop();
+        $from = $request->get('from');
+        $to = $request->get('to');
+        $statement = $this->accountingService->getContactStatement(
+            $contact,
+            $from ?: null,
+            $to ?: null,
+            (float) ($shop->exchange_rate ?? 14500)
+        );
 
         return view('contacts.statement', [
             'statement' => $statement,
-            'shop' => current_shop(),
+            'shop' => $shop,
         ]);
     }
 

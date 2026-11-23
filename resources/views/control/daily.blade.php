@@ -86,17 +86,21 @@
                 <span class="block mt-1 text-[11px] text-slate-500">عامة ${{ number_format($report['expenses_usd'], 2) }} · شحن ${{ number_format($report['shipping_expenses_usd'], 2) }}</span>
             </div>
 
-            <div class="p-4 bg-gold-50 rounded-xl border border-gold-200">
-                <span class="block text-[11px] text-gold-800 font-semibold">تحويلات العملة ({{ $report['currency_exchanges_count'] }})</span>
-                <strong class="block mt-1 text-lg font-mono font-bold text-brand-950">${{ number_format($report['currency_exchanges_usd'], 2) }}</strong>
-            </div>
+            @php $dailyFx = (float) ($report['fx_diff_usd'] ?? 0); @endphp
+            <a href="{{ route('reports.fx', ['from' => $date, 'to' => $date]) }}" class="block p-4 bg-gold-50 hover:bg-gold-100/70 rounded-xl border border-gold-200 transition-colors">
+                <span class="block text-[11px] text-gold-800 font-semibold">تحويلات العملة وفروق الصرف ({{ $report['currency_exchanges_count'] }})</span>
+                <strong class="block mt-1 text-lg font-mono font-bold text-brand-950" dir="ltr">${{ number_format($report['currency_exchanges_usd'], 2) }}</strong>
+                <span class="block mt-1 text-[11px] font-semibold {{ $dailyFx >= 0 ? 'text-brand-700' : 'text-rose-600' }}">
+                    فرق الصرف: <span class="font-mono inline-block" dir="ltr">{{ $dailyFx >= 0 ? '+' : '-' }}${{ number_format(abs($dailyFx), 2) }}</span>
+                </span>
+            </a>
         </div>
 
         <!-- Daily Cashbox Net Bar -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-2">
             <div class="p-3.5 rounded-xl bg-brand-900 text-white flex items-center justify-between">
                 <span>صافي حركة صندوق الدولار اليوم</span>
-                <strong class="font-mono text-sm" dir="ltr">{{ $report['cash_usd'] >= 0 ? '+' : '' }}${{ number_format($report['cash_usd'], 2) }}</strong>
+                <strong class="font-mono text-sm inline-block" dir="ltr">{{ $report['cash_usd'] >= 0 ? '+' : '-' }}${{ number_format(abs($report['cash_usd']), 2) }}</strong>
             </div>
             <div class="p-3.5 rounded-xl bg-slate-800 text-white flex items-center justify-between">
                 <span>صافي حركة صندوق الليرة اليوم</span>

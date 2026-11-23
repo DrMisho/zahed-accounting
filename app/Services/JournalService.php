@@ -148,11 +148,40 @@ class JournalService
         $doc = $exchange->reference_number ?: 'EX-'.$exchange->id;
         $desc = $exchange->directionLabel();
 
+        $baseRate = (float) ($shop->exchange_rate > 0 ? $shop->exchange_rate : 14500);
+        $fxDiff = $exchange->fxDiffUsd($baseRate);
+        $hasFxAccount = abs($fxDiff) >= 0.01 && (bool) $this->accountId($exchange->shop_id, 'fx_diff');
+
+        $lines = [];
+        if ($hasFxAccount) {
+            if ($exchange->direction === 'syp_to_usd') {
+                $sypBookUsd = round((float) $exchange->from_amount / $baseRate, 2);
+                $lines[] = [$debitRole, $usd, 0, $usd, $desc];
+                $lines[] = [$creditRole, 0, $sypBookUsd, $sypBookUsd, $desc];
+                if ($fxDiff > 0) {
+                    $lines[] = ['fx_diff', 0, $fxDiff, $fxDiff, 'ربح فرق صرف عملة - '.$doc];
+                } else {
+                    $loss = abs($fxDiff);
+                    $lines[] = ['fx_diff', $loss, 0, $loss, 'خسارة فرق صرف عملة - '.$doc];
+                }
+            } else {
+                $sypReceivedBookUsd = round((float) $exchange->to_amount / $baseRate, 2);
+                $lines[] = [$debitRole, $sypReceivedBookUsd, 0, $sypReceivedBookUsd, $desc];
+                $lines[] = [$creditRole, 0, $usd, $usd, $desc];
+                if ($fxDiff > 0) {
+                    $lines[] = ['fx_diff', 0, $fxDiff, $fxDiff, 'ربح فرق صرف عملة - '.$doc];
+                } else {
+                    $loss = abs($fxDiff);
+                    $lines[] = ['fx_diff', $loss, 0, $loss, 'خسارة فرق صرف عملة - '.$doc];
+                }
+            }
+        } else {
+            $lines[] = [$debitRole, $usd, 0, $usd, $desc];
+            $lines[] = [$creditRole, 0, $usd, $usd, $desc];
+        }
+
         $this->forgetSource($exchange->shop_id, 'currency_exchange', $exchange->id);
-        $this->write($exchange->shop_id, $exchange->date->format('Y-m-d'), $doc, 'currency_exchange', $exchange->id, $desc, [
-            [$debitRole, $usd, 0, $usd, $desc],
-            [$creditRole, 0, $usd, $usd, $desc],
-        ], 'USD');
+        $this->write($exchange->shop_id, $exchange->date->format('Y-m-d'), $doc, 'currency_exchange', $exchange->id, $desc, $lines, 'USD');
     }
 
     public function postShippingExpense(ShippingExpense $shipping): void

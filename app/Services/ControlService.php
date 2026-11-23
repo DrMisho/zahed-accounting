@@ -49,7 +49,7 @@ class ControlService
         $unclassified = PartnerWithdrawal::where('shop_id', $shopId)->where('classification_status', '!=', 'مصنف')->count();
         $incompleteSalaries = SalaryRecord::where('shop_id', $shopId)->get()->filter(fn ($s) => !$s->employee_id || (float) $s->net < 0)->count();
         $incompleteEmp = EmployeeMovement::where('shop_id', $shopId)->get()->filter(fn ($m) => !$m->employee_id || (float) $m->amount <= 0)->count();
-        $pnl = $this->accounting->getProfitAndLossReport($shopId);
+        $pnl = $this->accounting->getProfitAndLossReport($shopId, $rate);
         $expSum = (float) Expense::where('shop_id', $shopId)->sum('amount_usd');
         $expCash = (float) CashMovement::where('shop_id', $shopId)->where('type', 'expense')->sum('amount_usd');
         $salSum = (float) SalaryRecord::where('shop_id', $shopId)->sum('amount_usd');
@@ -251,6 +251,23 @@ class ControlService
         $employeeTotalUsd = $salariesUsd + $employeeMovementsUsd;
 
         $currencyExchangesUsd = (float) $exchanges->sum('amount_usd');
+        $dailyRealizedFxUsd = (float) $exchanges->sum(fn ($ex) => $ex->fxDiffUsd($safeRate));
+        $dailyOpFxUsd = 0.0;
+        foreach ($txs->where('currency', 'SYP') as $tx) {
+            $amtSyp = (float) $tx->total;
+            $hist = (float) $tx->total_usd;
+            $curr = round($amtSyp / $safeRate, 2);
+            $isIn = in_array($tx->type, ['sale', 'purchase_return'], true);
+            $dailyOpFxUsd += $isIn ? ($curr - $hist) : ($hist - $curr);
+        }
+        foreach ($cash->where('currency', 'SYP')->reject(fn ($m) => in_array($m->source_type, ['transaction', 'currency_exchange_in', 'currency_exchange_out'], true)) as $cm) {
+            $amtSyp = (float) $cm->amount;
+            $hist = $resolveUsd($cm);
+            $curr = round($amtSyp / $safeRate, 2);
+            $isIn = in_array($cm->type, ['opening', 'receipt', 'purchase_return_cash'], true);
+            $dailyOpFxUsd += $isIn ? ($curr - $hist) : ($hist - $curr);
+        }
+        $dailyFxDiffUsd = round($dailyRealizedFxUsd + $dailyOpFxUsd, 2);
 
         // Dual currency daily net cashbox movements (includes currency exchanges & unlinked cash invoices)
         $cashUsdIn = (float) $cash->where('currency', 'USD')->whereIn('type', ['receipt', 'opening'])->sum('amount')
@@ -470,6 +487,7 @@ class ControlService
             'employee_total_usd' => round($employeeTotalUsd, 2),
             'currency_exchanges_usd' => round($currencyExchangesUsd, 2),
             'currency_exchanges_count' => $exchanges->count(),
+            'fx_diff_usd' => $dailyFxDiffUsd,
             'operations' => $txs->count(),
             'total_movements' => count($movements),
             'category_counts' => $categoryCounts,
@@ -481,7 +499,7 @@ class ControlService
 
     public function ownerReport(string $shopId, float $rate): array
     {
-        $pnl = $this->accounting->getProfitAndLossReport($shopId);
+        $pnl = $this->accounting->getProfitAndLossReport($shopId, $rate);
         $cash = $this->accounting->getCashboxSummary($shopId, $rate);
         $bs = $this->accounting->getBalanceSheet($shopId, $rate);
         $low = collect($this->accounting->getInventoryValuation($shopId))->where('is_low_stock', true)->count();

@@ -53,11 +53,15 @@
 
         $sidebarGroups[] = [
             'id' => 'receivables',
-            'title' => 'الذمم',
+            'title' => 'الذمم والكشوف',
             'icon' => 'customers',
             'items' => [
                 ['contacts.index', 'العملاء', 'customers', ['type' => 'customer'], 'contacts.index'],
                 ['contacts.index', 'الموردون', 'suppliers', ['type' => 'supplier'], 'contacts.index'],
+                ['reports.customers', 'كشف العملاء', 'customers', [], 'reports.customers'],
+                ['reports.suppliers', 'كشف الموردين', 'suppliers', [], 'reports.suppliers'],
+                ['reports.sales', 'كشف المبيعات', 'sales-statement', [], 'reports.sales'],
+                ['reports.purchases', 'كشف المشتريات', 'purchases-statement', [], 'reports.purchases'],
                 ['control.collection', 'متابعة التحصيل', 'collection', [], 'control.collection'],
             ],
         ];
@@ -79,11 +83,14 @@
             'title' => 'المحاسبة والتقارير',
             'icon' => 'accounts',
             'items' => [
+                ['reports.final-accounts', 'الحسابات الختامية', 'final-accounts', [], 'reports.final-accounts'],
+                ['reports.trading', 'حساب المتاجرة', 'trading', [], 'reports.trading'],
+                ['reports.pnl', 'الأرباح والخسائر', 'pnl', [], 'reports.pnl'],
+                ['reports.balance', 'الميزانية العمومية', 'balance', [], 'reports.balance'],
+                ['reports.fx', 'فروق صرف العملة', 'fx-diff', [], 'reports.fx'],
                 ['books.accounts', 'دليل الحسابات', 'accounts', [], 'books.accounts'],
                 ['books.ledger', 'الأستاذ العام', 'ledger', [], 'books.ledger'],
                 ['books.trial', 'ميزان المراجعة', 'trial', [], 'books.trial'],
-                ['reports.pnl', 'قائمة الدخل', 'pnl', [], 'reports.pnl'],
-                ['reports.balance', 'الميزانية العمومية', 'balance', [], 'reports.balance'],
                 ['reports.profitability', 'تحليل التكلفة والربحية', 'profitability', [], 'reports.profitability'],
                 ['books.cost-centers', 'مراكز التكلفة', 'cost-centers', [], 'books.cost-centers'],
             ],

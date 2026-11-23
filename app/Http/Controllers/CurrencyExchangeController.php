@@ -20,11 +20,15 @@ class CurrencyExchangeController extends Controller
         $rows = CurrencyExchange::latest('date')->latest('id')->get();
         $summary = $this->accounting->getCashboxSummary($shop->id, (float) $shop->exchange_rate);
 
+        $shopRate = (float) ($shop->exchange_rate > 0 ? $shop->exchange_rate : 14500);
+        $totalFxDiffUsd = round((float) $rows->sum(fn ($r) => $r->fxDiffUsd($shopRate)), 2);
+
         $stats = [
             'syp_to_usd_syp' => (float) $rows->where('direction', 'syp_to_usd')->sum('from_amount'),
             'syp_to_usd_usd' => (float) $rows->where('direction', 'syp_to_usd')->sum('to_amount'),
             'usd_to_syp_usd' => (float) $rows->where('direction', 'usd_to_syp')->sum('from_amount'),
             'usd_to_syp_syp' => (float) $rows->where('direction', 'usd_to_syp')->sum('to_amount'),
+            'total_fx_diff_usd' => $totalFxDiffUsd,
             'count' => $rows->count(),
         ];
 
