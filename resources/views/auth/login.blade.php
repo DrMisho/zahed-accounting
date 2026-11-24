@@ -50,6 +50,11 @@
                 تسجيل الدخول للنظام
             </button>
         </form>
+        <div class="mt-5 pt-4 border-t border-slate-100 text-center">
+            <a href="{{ route('landing') }}" class="text-xs font-semibold text-slate-500 hover:text-brand-700 transition-colors">
+                العودة إلى الصفحة الرئيسية
+            </a>
+        </div>
     </div>
 </body>
 </html>
