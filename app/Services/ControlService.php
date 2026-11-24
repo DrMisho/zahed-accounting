@@ -49,7 +49,8 @@ class ControlService
         $unclassified = PartnerWithdrawal::where('shop_id', $shopId)->where('classification_status', '!=', 'مصنف')->count();
         $incompleteSalaries = SalaryRecord::where('shop_id', $shopId)->get()->filter(fn ($s) => !$s->employee_id || (float) $s->net < 0)->count();
         $incompleteEmp = EmployeeMovement::where('shop_id', $shopId)->get()->filter(fn ($m) => !$m->employee_id || (float) $m->amount <= 0)->count();
-        $pnl = $this->accounting->getProfitAndLossReport($shopId, $rate);
+        $this->journal->ensureSeededFromOperations($shopId, $this->accounting);
+        $pnl = $this->journal->getGlProfitAndLoss($shopId, $rate);
         $expSum = (float) Expense::where('shop_id', $shopId)->sum('amount_usd');
         $expCash = (float) CashMovement::where('shop_id', $shopId)->where('type', 'expense')->sum('amount_usd');
         $salSum = (float) SalaryRecord::where('shop_id', $shopId)->sum('amount_usd');
@@ -499,9 +500,10 @@ class ControlService
 
     public function ownerReport(string $shopId, float $rate): array
     {
-        $pnl = $this->accounting->getProfitAndLossReport($shopId, $rate);
+        $this->journal->ensureSeededFromOperations($shopId, $this->accounting);
+        $pnl = $this->journal->getGlProfitAndLoss($shopId, $rate);
         $cash = $this->accounting->getCashboxSummary($shopId, $rate);
-        $bs = $this->accounting->getBalanceSheet($shopId, $rate);
+        $bs = $this->journal->getGlBalanceSheet($shopId, $rate);
         $low = collect($this->accounting->getInventoryValuation($shopId))->where('is_low_stock', true)->count();
 
         return compact('pnl', 'cash', 'bs', 'low');

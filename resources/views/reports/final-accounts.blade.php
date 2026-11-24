@@ -5,8 +5,6 @@
 @section('content')
 @php
     $fxDiff = (float) ($pnl['fx_diff_usd'] ?? 0);
-    $fxGain = (float) ($pnl['fx_gain_usd'] ?? ($fxDiff > 0 ? $fxDiff : 0));
-    $fxLoss = (float) ($pnl['fx_loss_usd'] ?? ($fxDiff < 0 ? abs($fxDiff) : 0));
     $grossProfit = (float) $pnl['gross_profit_usd'];
     $netProfit = (float) $pnl['estimated_net_profit_usd'];
     $pnlTotal = (float) ($pnl['pnl_debit_total_usd'] ?? 0);
@@ -15,41 +13,60 @@
     @include('reports.partials.final-accounts-tabs')
 
     <!-- Executive Header -->
-    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-xl font-bold text-slate-900">الحسابات الختامية الشاملة — {{ $shop->name }}</h1>
-            <p class="text-xs text-slate-500 mt-1">
-                حساب المتاجرة + حساب الأرباح والخسائر + الميزانية العمومية · العملة الأساسية: <strong class="text-brand-800">الدولار الأمريكي (USD)</strong> ·
-                سعر الصرف: <span class="font-mono font-semibold text-slate-800" dir="ltr">{{ number_format($bs['current_rate']) }}</span> ل.س
-            </p>
+    <div class="bg-white rounded-2xl p-6 border border-slate-200 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">الحسابات الختامية الشاملة (من دفتر الأستاذ العام) — {{ $shop->name }}</h1>
+                <p class="text-xs text-slate-500 mt-1">
+                    المتاجرة + الأرباح والخسائر + الميزانية العمومية · مصدر البيانات: <strong class="text-brand-800">شجرة الحسابات والقيود المرحلة (USD)</strong>
+                </p>
+            </div>
+            <div class="no-print flex items-center gap-2 text-xs">
+                <a href="{{ route('books.trial') }}" class="px-3.5 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl whitespace-nowrap">ميزان المراجعة</a>
+                <button type="button" onclick="window.print()" class="px-4 py-2 font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors whitespace-nowrap">
+                    طباعة الحسابات الختامية
+                </button>
+            </div>
         </div>
-        <button type="button" onclick="window.print()" class="no-print px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors self-start sm:self-center">
-            طباعة الحسابات الختامية
-        </button>
+
+        <form method="GET" action="{{ route('reports.final-accounts') }}" class="no-print flex flex-wrap items-end gap-3 text-xs pt-1 border-t border-slate-100">
+            <div>
+                <label for="fa-from" class="block text-[11px] font-semibold text-slate-600 mb-1">من تاريخ</label>
+                <input id="fa-from" type="date" name="from" value="{{ $from ?? '' }}" class="p-2 rounded-xl border border-slate-300 font-mono">
+            </div>
+            <div>
+                <label for="fa-to" class="block text-[11px] font-semibold text-slate-600 mb-1">إلى تاريخ</label>
+                <input id="fa-to" type="date" name="to" value="{{ $to ?? '' }}" class="p-2 rounded-xl border border-slate-300 font-mono">
+            </div>
+            <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl">تحديث</button>
+            @if(!empty($from) || !empty($to))
+                <a href="{{ route('reports.final-accounts') }}" class="px-3 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-xl">الكل</a>
+            @endif
+        </form>
     </div>
 
     <!-- Key Highlights -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-        <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <div class="p-4 rounded-xl bg-white border border-slate-200">
             <span class="block text-[11px] text-slate-500">مجمل الربح (المتاجرة)</span>
             <strong class="block mt-1 text-lg font-mono font-extrabold {{ $trading['trading_result_usd'] >= 0 ? 'text-brand-800' : 'text-rose-700' }}" dir="ltr">
-                ${{ number_format($trading['trading_result_usd'], 2) }}
+                {{ $trading['trading_result_usd'] < 0 ? '-' : '' }}${{ number_format(abs($trading['trading_result_usd']), 2) }}
             </strong>
         </div>
-        <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span class="block text-[11px] text-slate-500">فروق صرف العملة</span>
+        <div class="p-4 rounded-xl bg-white border border-slate-200">
+            <span class="block text-[11px] text-slate-500">صافي فروق الصرف المرحلة</span>
             <strong class="block mt-1 text-lg font-mono font-extrabold {{ $fxDiff >= 0 ? 'text-brand-700' : 'text-rose-600' }}" dir="ltr">
                 {{ $fxDiff >= 0 ? '+' : '-' }}${{ number_format(abs($fxDiff), 2) }}
             </strong>
         </div>
-        <div class="p-4 rounded-xl bg-brand-50 border border-brand-200 shadow-sm">
+        <div class="p-4 rounded-xl bg-brand-50 border border-brand-200">
             <span class="block text-[11px] text-brand-800 font-semibold">صافي الربح (الأرباح والخسائر)</span>
             <strong class="block mt-1 text-lg font-mono font-extrabold {{ $netProfit >= 0 ? 'text-brand-950' : 'text-rose-700' }}" dir="ltr">
-                ${{ number_format($netProfit, 2) }}
+                {{ $netProfit < 0 ? '-' : '' }}${{ number_format(abs($netProfit), 2) }}
             </strong>
         </div>
-        <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span class="block text-[11px] text-slate-500">إجمالي الميزانية العمومية</span>
+        <div class="p-4 rounded-xl bg-white border border-slate-200">
+            <span class="block text-[11px] text-slate-500">إجمالي الميزانية ({{ $bs['balanced'] ? 'متوازنة' : 'فرق' }})</span>
             <strong class="block mt-1 text-lg font-mono font-extrabold text-slate-900" dir="ltr">
                 ${{ number_format($bs['total_assets_usd'], 2) }}
             </strong>
@@ -57,7 +74,7 @@
     </div>
 
     <!-- 1. Trading Account -->
-    <section class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+    <section class="bg-white rounded-2xl p-6 border border-slate-200 space-y-4">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-bold text-slate-900">1) حساب المتاجرة</h2>
             <a href="{{ route('reports.trading') }}" class="no-print text-xs font-semibold text-brand-700 hover:underline">عرض مستقل</a>
@@ -67,8 +84,10 @@
                 <div class="px-4 py-2.5 bg-brand-950 text-white font-bold">منه (مدين)</div>
                 <div class="divide-y divide-slate-100 flex-1">
                     @foreach($trading['debit_items'] as $item)
-                        <div class="px-4 py-2.5 flex justify-between">
-                            <span>{{ $item['label'] }}</span>
+                        <div class="px-4 py-2.5 flex justify-between gap-2">
+                            <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700 hover:underline">
+                                <span class="font-mono text-slate-400 ml-1">{{ $item['code'] }}</span>{{ $item['label'] }}
+                            </a>
                             <span class="font-mono font-semibold" dir="ltr">${{ number_format($item['amount_usd'], 2) }}</span>
                         </div>
                     @endforeach
@@ -88,8 +107,10 @@
                 <div class="px-4 py-2.5 bg-brand-950 text-white font-bold">له (دائن)</div>
                 <div class="divide-y divide-slate-100 flex-1">
                     @foreach($trading['credit_items'] as $item)
-                        <div class="px-4 py-2.5 flex justify-between">
-                            <span>{{ $item['label'] }}</span>
+                        <div class="px-4 py-2.5 flex justify-between gap-2">
+                            <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700 hover:underline">
+                                <span class="font-mono text-slate-400 ml-1">{{ $item['code'] }}</span>{{ $item['label'] }}
+                            </a>
                             <span class="font-mono font-semibold" dir="ltr">${{ number_format($item['amount_usd'], 2) }}</span>
                         </div>
                     @endforeach
@@ -109,7 +130,7 @@
     </section>
 
     <!-- 2. Profit & Loss Account -->
-    <section class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+    <section class="bg-white rounded-2xl p-6 border border-slate-200 space-y-4">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-bold text-slate-900">2) حساب الأرباح والخسائر</h2>
             <a href="{{ route('reports.pnl') }}" class="no-print text-xs font-semibold text-brand-700 hover:underline">عرض مستقل</a>
@@ -120,24 +141,18 @@
                 <div class="divide-y divide-slate-100 flex-1">
                     @if($grossProfit < 0)
                         <div class="px-4 py-2.5 flex justify-between text-rose-700 font-semibold">
-                            <span>مجمل الخسارة</span>
+                            <span>مجمل الخسارة المرحّل</span>
                             <span class="font-mono" dir="ltr">${{ number_format(abs($grossProfit), 2) }}</span>
                         </div>
                     @endif
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>مصاريف عامة وتشغيلية</span>
-                        <span class="font-mono font-semibold" dir="ltr">${{ number_format($pnl['total_expenses_usd'], 2) }}</span>
-                    </div>
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>رواتب وأجور الموظفين</span>
-                        <span class="font-mono font-semibold" dir="ltr">${{ number_format($pnl['total_salaries_usd'], 2) }}</span>
-                    </div>
-                    @if($fxLoss > 0)
-                        <div class="px-4 py-2.5 flex justify-between text-rose-700">
-                            <span>خسائر فروق صرف العملة</span>
-                            <span class="font-mono font-semibold" dir="ltr">${{ number_format($fxLoss, 2) }}</span>
+                    @foreach($pnl['debit_items'] ?? [] as $item)
+                        <div class="px-4 py-2.5 flex justify-between gap-2">
+                            <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700 hover:underline">
+                                <span class="font-mono text-slate-400 ml-1">{{ $item['code'] }}</span>{{ $item['label'] }}
+                            </a>
+                            <span class="font-mono font-semibold" dir="ltr">${{ number_format($item['amount_usd'], 2) }}</span>
                         </div>
-                    @endif
+                    @endforeach
                     @if($netProfit > 0)
                         <div class="px-4 py-2.5 flex justify-between bg-brand-50 text-brand-900 font-bold">
                             <span>صافي الربح (مرحّل للميزانية)</span>
@@ -159,12 +174,14 @@
                             <span class="font-mono font-semibold text-brand-800" dir="ltr">${{ number_format($grossProfit, 2) }}</span>
                         </div>
                     @endif
-                    @if($fxGain > 0)
-                        <div class="px-4 py-2.5 flex justify-between text-brand-700">
-                            <span>أرباح فروق صرف العملة</span>
-                            <span class="font-mono font-semibold" dir="ltr">${{ number_format($fxGain, 2) }}</span>
+                    @foreach($pnl['credit_items'] ?? [] as $item)
+                        <div class="px-4 py-2.5 flex justify-between gap-2">
+                            <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700 hover:underline">
+                                <span class="font-mono text-slate-400 ml-1">{{ $item['code'] }}</span>{{ $item['label'] }}
+                            </a>
+                            <span class="font-mono font-semibold text-brand-700" dir="ltr">${{ number_format($item['amount_usd'], 2) }}</span>
                         </div>
-                    @endif
+                    @endforeach
                     @if($netProfit < 0)
                         <div class="px-4 py-2.5 flex justify-between bg-rose-50 text-rose-800 font-bold">
                             <span>صافي الخسارة (مرحّل للميزانية)</span>
@@ -181,7 +198,7 @@
     </section>
 
     <!-- 3. Balance Sheet -->
-    <section class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+    <section class="bg-white rounded-2xl p-6 border border-slate-200 space-y-4">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-bold text-slate-900">3) الميزانية العمومية (المركز المالي)</h2>
             <a href="{{ route('reports.balance') }}" class="no-print text-xs font-semibold text-brand-700 hover:underline">عرض مستقل</a>
@@ -190,18 +207,14 @@
             <div class="border-b md:border-b-0 md:border-l border-slate-300 flex flex-col">
                 <div class="px-4 py-2.5 bg-brand-950 text-white font-bold">الموجودات (الأصول)</div>
                 <div class="divide-y divide-slate-100 flex-1">
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>النقدية في الصندوق (دولار + ل.س معادل)</span>
-                        <span class="font-mono font-semibold" dir="ltr">${{ number_format($bs['total_cash_usd'], 2) }}</span>
-                    </div>
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>ذمم العملاء (دولار + ل.س معادل)</span>
-                        <span class="font-mono font-semibold" dir="ltr">${{ number_format($bs['total_ar_usd'], 2) }}</span>
-                    </div>
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>بضاعة آخر المدة (المخزون)</span>
-                        <span class="font-mono font-semibold" dir="ltr">${{ number_format($bs['inventory_usd'], 2) }}</span>
-                    </div>
+                    @foreach(array_merge($bs['current_assets'] ?? [], $bs['fixed_assets'] ?? []) as $item)
+                        <div class="px-4 py-2.5 flex justify-between gap-2">
+                            <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700 hover:underline">
+                                <span class="font-mono text-slate-400 ml-1">{{ $item['code'] }}</span>{{ $item['label'] }}
+                            </a>
+                            <span class="font-mono font-semibold" dir="ltr">{{ $item['amount_usd'] < 0 ? '-' : '' }}${{ number_format(abs($item['amount_usd']), 2) }}</span>
+                        </div>
+                    @endforeach
                 </div>
                 <div class="px-4 py-2.5 bg-slate-100 border-t border-slate-300 flex justify-between font-extrabold">
                     <span>مجموع الموجودات</span>
@@ -211,21 +224,25 @@
             <div class="flex flex-col">
                 <div class="px-4 py-2.5 bg-brand-950 text-white font-bold">المطاليب وحقوق الملكية</div>
                 <div class="divide-y divide-slate-100 flex-1">
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>ذمم الموردين (دولار + ل.س معادل)</span>
-                        <span class="font-mono font-semibold text-rose-700" dir="ltr">${{ number_format($bs['total_ap_usd'], 2) }}</span>
-                    </div>
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>رأس المال والأرصدة المدوّرة</span>
-                        <span class="font-mono font-semibold" dir="ltr">${{ number_format($bs['capital_usd'], 2) }}</span>
-                    </div>
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>صافي الربح / الخسارة</span>
-                        <span class="font-mono font-bold {{ $bs['profit_usd'] >= 0 ? 'text-brand-700' : 'text-rose-700' }}" dir="ltr">${{ number_format($bs['profit_usd'], 2) }}</span>
-                    </div>
-                    <div class="px-4 py-2.5 flex justify-between">
-                        <span>(-) مسحوبات الشركاء</span>
-                        <span class="font-mono font-semibold text-amber-700" dir="ltr">-${{ number_format($bs['withdrawals_usd'], 2) }}</span>
+                    @foreach(array_merge($bs['current_liabilities'] ?? [], $bs['long_term_liabilities'] ?? []) as $item)
+                        <div class="px-4 py-2.5 flex justify-between gap-2">
+                            <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700 hover:underline">
+                                <span class="font-mono text-slate-400 ml-1">{{ $item['code'] }}</span>{{ $item['label'] }}
+                            </a>
+                            <span class="font-mono font-semibold text-rose-700" dir="ltr">${{ number_format($item['amount_usd'], 2) }}</span>
+                        </div>
+                    @endforeach
+                    @foreach($bs['equity_items'] ?? [] as $item)
+                        <div class="px-4 py-2.5 flex justify-between gap-2">
+                            <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700 hover:underline">
+                                <span class="font-mono text-slate-400 ml-1">{{ $item['code'] }}</span>{{ $item['label'] }}
+                            </a>
+                            <span class="font-mono font-semibold {{ $item['amount_usd'] < 0 ? 'text-amber-700' : 'text-slate-900' }}" dir="ltr">{{ $item['amount_usd'] < 0 ? '-' : '' }}${{ number_format(abs($item['amount_usd']), 2) }}</span>
+                        </div>
+                    @endforeach
+                    <div class="px-4 py-2.5 flex justify-between bg-brand-50/60">
+                        <span class="font-bold">صافي الربح / الخسارة</span>
+                        <span class="font-mono font-bold {{ $bs['profit_usd'] >= 0 ? 'text-brand-700' : 'text-rose-700' }}" dir="ltr">{{ $bs['profit_usd'] < 0 ? '-' : '' }}${{ number_format(abs($bs['profit_usd']), 2) }}</span>
                     </div>
                 </div>
                 <div class="px-4 py-2.5 bg-slate-100 border-t border-slate-300 flex justify-between font-extrabold">

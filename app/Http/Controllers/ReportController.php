@@ -4,16 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Services\AccountingService;
+use App\Services\JournalService;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    protected AccountingService $accountingService;
-
-    public function __construct(AccountingService $accountingService)
-    {
-        $this->accountingService = $accountingService;
-    }
+    public function __construct(
+        protected AccountingService $accountingService,
+        protected JournalService $journalService,
+    ) {}
 
     public function sales(Request $request)
     {
@@ -70,20 +69,32 @@ class ReportController extends Controller
     public function fxDifferences(Request $request)
     {
         $shop = current_shop();
+        $this->journalService->ensureSeededFromOperations($shop->id, $this->accountingService);
+
         $from = $request->get('from');
         $to = $request->get('to');
-        $fx = $this->accountingService->getFxDifferenceReport($shop->id, (float) $shop->exchange_rate, $from, $to);
+        $rate = (float) $shop->exchange_rate;
+        $fx = $this->accountingService->getFxDifferenceReport($shop->id, $rate, $from, $to);
+        $glFxPreview = $this->journalService->getGlFxPreview($shop->id, $rate);
 
         return view('reports.fx', [
             'fx' => $fx,
+            'glFxPreview' => $glFxPreview,
             'shop' => $shop,
         ]);
     }
 
-    public function trading()
+    /**
+     * Trading Account strictly calculated from the Chart of Accounts & General Ledger.
+     */
+    public function trading(Request $request)
     {
         $shop = current_shop();
-        $trading = $this->accountingService->getTradingAccount($shop->id, (float) $shop->exchange_rate);
+        $this->journalService->ensureSeededFromOperations($shop->id, $this->accountingService);
+
+        $from = $request->get('from');
+        $to = $request->get('to');
+        $trading = $this->journalService->getGlTradingAccount($shop->id, (float) $shop->exchange_rate, $from, $to);
 
         return view('reports.trading', [
             'trading' => $trading,
@@ -91,11 +102,17 @@ class ReportController extends Controller
         ]);
     }
 
-    public function pnl()
+    /**
+     * Profit & Loss Account strictly calculated from the Chart of Accounts & General Ledger.
+     */
+    public function pnl(Request $request)
     {
         $shop = current_shop();
-        $rate = (float) $shop->exchange_rate;
-        $pnl = $this->accountingService->getProfitAndLossReport($shop->id, $rate);
+        $this->journalService->ensureSeededFromOperations($shop->id, $this->accountingService);
+
+        $from = $request->get('from');
+        $to = $request->get('to');
+        $pnl = $this->journalService->getGlProfitAndLoss($shop->id, (float) $shop->exchange_rate, $from, $to);
 
         return view('reports.pnl', [
             'pnl' => $pnl,
@@ -103,18 +120,45 @@ class ReportController extends Controller
         ]);
     }
 
-    public function finalAccounts()
+    /**
+     * Balance Sheet strictly calculated from the Chart of Accounts & General Ledger.
+     */
+    public function balanceSheet(Request $request)
     {
         $shop = current_shop();
+        $this->journalService->ensureSeededFromOperations($shop->id, $this->accountingService);
+
+        $asOf = $request->get('as_of') ?: $request->get('to');
+        $bs = $this->journalService->getGlBalanceSheet($shop->id, (float) $shop->exchange_rate, $asOf);
+
+        return view('reports.balance', [
+            'bs' => $bs,
+            'shop' => $shop,
+        ]);
+    }
+
+    /**
+     * Combined Final Accounts package strictly calculated from the General Ledger.
+     */
+    public function finalAccounts(Request $request)
+    {
+        $shop = current_shop();
+        $this->journalService->ensureSeededFromOperations($shop->id, $this->accountingService);
+
         $rate = (float) $shop->exchange_rate;
-        $trading = $this->accountingService->getTradingAccount($shop->id, $rate);
-        $pnl = $this->accountingService->getProfitAndLossReport($shop->id, $rate);
-        $bs = $this->accountingService->getBalanceSheet($shop->id, $rate);
+        $from = $request->get('from');
+        $to = $request->get('to');
+
+        $trading = $this->journalService->getGlTradingAccount($shop->id, $rate, $from, $to);
+        $pnl = $this->journalService->getGlProfitAndLoss($shop->id, $rate, $from, $to);
+        $bs = $this->journalService->getGlBalanceSheet($shop->id, $rate, $to);
 
         return view('reports.final-accounts', [
             'trading' => $trading,
             'pnl' => $pnl,
             'bs' => $bs,
+            'from' => $from,
+            'to' => $to,
             'shop' => $shop,
         ]);
     }
@@ -137,15 +181,6 @@ class ReportController extends Controller
 
         return view('reports.cashflow', [
             'cashbox' => $cashbox,
-            'shop' => $shop,
-        ]);
-    }
-
-    public function balanceSheet()
-    {
-        $shop = current_shop();
-        return view('reports.balance', [
-            'bs' => $this->accountingService->getBalanceSheet($shop->id, (float) $shop->exchange_rate),
             'shop' => $shop,
         ]);
     }

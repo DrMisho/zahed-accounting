@@ -14,12 +14,20 @@ class Shop extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
+    protected $attributes = [
+        'posting_enabled' => true,
+        'base_currency' => 'USD',
+        'secondary_currency' => 'SYP',
+    ];
+
     protected $fillable = [
         'id',
         'name',
         'subscription_status', // active, expired, suspended
         'end_date',
         'exchange_rate',
+        'base_currency',
+        'secondary_currency',
         'owner_name',
         'phone',
         'plan_price_usd',

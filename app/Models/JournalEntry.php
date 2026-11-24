@@ -21,16 +21,35 @@ class JournalEntry extends Model
 
     public function debitTotal(): float
     {
-        return (float) $this->lines()->sum('debit');
+        return round((float) $this->lines()->sum('debit'), 2);
     }
 
     public function creditTotal(): float
     {
-        return (float) $this->lines()->sum('credit');
+        return round((float) $this->lines()->sum('credit'), 2);
     }
 
     public function isBalanced(): bool
     {
         return abs($this->debitTotal() - $this->creditTotal()) < 0.01;
+    }
+
+    public function sourceLabel(): string
+    {
+        return match ($this->source_type) {
+            'transaction' => 'فاتورة',
+            'voucher' => 'سند قبض / صرف',
+            'cash_movement' => 'حركة صندوق مباشرة',
+            'expense' => 'مصروف عام',
+            'shipping_expense' => 'أجور شحن',
+            'salary' => 'راتب موظف',
+            'employee_movement' => 'حركة موظف',
+            'withdrawal' => 'مسحوب شريك',
+            'currency_exchange' => 'تحويل عملة',
+            'fx_revaluation' => 'إعادة تقييم فروق صرف',
+            'opening_sync' => 'أرصدة افتتاحية',
+            'manual' => 'قيد يدوي',
+            default => 'قيد محاسبي',
+        };
     }
 }

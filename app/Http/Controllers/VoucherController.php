@@ -85,19 +85,36 @@ class VoucherController extends Controller
 
     public function expenses()
     {
+        $shop = current_shop();
+        $expenseAccounts = \App\Models\Account::where('shop_id', $shop->id)
+            ->where('type', 'expense')
+            ->where('statement_type', 'pnl')
+            ->where('is_postable', true)
+            ->orderBy('code')
+            ->get();
+
         return view('vouchers.expenses', [
-            'rows' => Expense::with('costCenter')->latest('date')->get(),
+            'rows' => Expense::with(['costCenter', 'account'])->latest('date')->get(),
             'centers' => CostCenter::orderBy('code')->get(),
-            'shop' => current_shop(),
+            'expenseAccounts' => $expenseAccounts,
+            'shop' => $shop,
         ]);
     }
 
     public function storeExpense(Request $request)
     {
+        if ($request->input('account_id') === '') {
+            $request->merge(['account_id' => null]);
+        }
+        if ($request->input('cost_center_id') === '') {
+            $request->merge(['cost_center_id' => null]);
+        }
+
         $this->posting->saveExpense($request->validate([
             'date' => 'required|date',
             'voucher_number' => 'nullable|string',
             'expense_type' => 'required|string',
+            'account_id' => 'nullable|exists:accounts,id',
             'description' => 'nullable|string',
             'amount' => 'required|numeric|min:0.01',
             'currency' => 'required|in:USD,SYP',
@@ -106,6 +123,6 @@ class VoucherController extends Controller
             'cost_center_id' => 'nullable|exists:cost_centers,id',
             'notes' => 'nullable|string',
         ]));
-        return back()->with('success', 'تم تسجيل المصروف وأثر الصندوق.');
+        return back()->with('success', 'تم تسجيل المصروف وترحيل قيده المحاسبي إلى دفتر الأستاذ.');
     }
 }

@@ -72,9 +72,15 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/books/accounts', [AccountingBooksController::class, 'accounts'])->name('books.accounts');
     Route::post('/books/accounts', [AccountingBooksController::class, 'storeAccount'])->name('books.accounts.store');
+    Route::put('/books/accounts/{account}', [AccountingBooksController::class, 'updateAccount'])->name('books.accounts.update');
     Route::delete('/books/accounts/{account}', [AccountingBooksController::class, 'destroyAccount'])->name('books.accounts.destroy');
+    Route::post('/books/rebuild', [AccountingBooksController::class, 'rebuildEntries'])->name('books.rebuild');
+    Route::post('/books/revalue-fx', [AccountingBooksController::class, 'revalueFx'])->name('books.revalue-fx');
+    Route::get('/books/mappings', [AccountingBooksController::class, 'mappings'])->name('books.mappings');
+    Route::post('/books/mappings', [AccountingBooksController::class, 'saveMappings'])->name('books.mappings.save');
     Route::get('/books/ledger', [AccountingBooksController::class, 'ledger'])->name('books.ledger');
     Route::post('/books/ledger', [AccountingBooksController::class, 'storeJournal'])->name('books.ledger.store');
+    Route::delete('/books/ledger/{journalEntry}', [AccountingBooksController::class, 'destroyJournal'])->name('books.ledger.destroy');
     Route::get('/books/trial', [AccountingBooksController::class, 'trial'])->name('books.trial');
     Route::get('/books/cost-centers', [AccountingBooksController::class, 'costCenters'])->name('books.cost-centers');
     Route::post('/books/cost-centers', [AccountingBooksController::class, 'storeCostCenter'])->name('books.cost-centers.store');

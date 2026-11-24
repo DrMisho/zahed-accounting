@@ -85,6 +85,92 @@
         </form>
     </div>
 
+    <!-- GL IAS 21 FX Revaluation Card -->
+    @if(isset($glFxPreview))
+        @php
+            $netAdj = (float) ($glFxPreview['net_adjustment_usd'] ?? 0);
+            $needsReval = (bool) ($glFxPreview['needs_revaluation'] ?? false);
+            $revalItems = $glFxPreview['items'] ?? [];
+        @endphp
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">إعادة تقييم الحسابات النقدية بالليرة السورية في الأستاذ العام (IAS 21)</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        مقارنة القيمة الدفترية بالدولار في دفتر الأستاذ مع القيمة الفعلية بسعر الصرف الحالي
+                        (<span class="font-mono font-semibold text-slate-700 inline-block" dir="ltr">{{ number_format($glFxPreview['current_rate'] ?? $shop->exchange_rate) }}</span> ل.س / $)
+                        وترحيل فرق التقييم إلى حساب أرباح/خسائر فروق الصرف.
+                    </p>
+                </div>
+                <div class="no-print shrink-0 flex items-center gap-2">
+                    @if($needsReval)
+                        <form method="POST" action="{{ route('books.revalue-fx') }}">
+                            @csrf
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold shadow-sm">
+                                ترحيل قيد إعادة التقييم الآن
+                            </button>
+                        </form>
+                    @else
+                        <span class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-800 border border-brand-200 text-xs font-semibold">
+                            الأرصدة الدفترية مطابقة لسعر الصرف الحالي
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            @if(!empty($revalItems))
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                                <th class="py-2.5 px-3">رقم الحساب</th>
+                                <th class="py-2.5 px-3">اسم الحساب في الشجرة</th>
+                                <th class="py-2.5 px-3 text-left">الرصيد الثانوي (ل.س)</th>
+                                <th class="py-2.5 px-3 text-left">القيمة الدفترية ($)</th>
+                                <th class="py-2.5 px-3 text-left">القيمة بسعر اليوم ($)</th>
+                                <th class="py-2.5 px-3 text-left">فرق التقييم ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach($revalItems as $item)
+                                <tr class="hover:bg-slate-50/80">
+                                    <td class="py-2.5 px-3 font-mono font-semibold text-brand-700 whitespace-nowrap">
+                                        <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:underline">{{ $item['code'] }}</a>
+                                    </td>
+                                    <td class="py-2.5 px-3 text-slate-800 font-medium">
+                                        <a href="{{ route('books.ledger', ['account_id' => $item['account_id']]) }}" class="hover:text-brand-700">{{ $item['name'] }}</a>
+                                    </td>
+                                    <td class="py-2.5 px-3 text-left font-mono text-slate-700 whitespace-nowrap" dir="ltr">
+                                        {{ $item['balance_syp'] < 0 ? '-' : '' }}{{ number_format(abs($item['balance_syp'])) }}
+                                    </td>
+                                    <td class="py-2.5 px-3 text-left font-mono text-slate-700 whitespace-nowrap" dir="ltr">
+                                        {{ $item['book_usd'] < 0 ? '-' : '' }}${{ number_format(abs($item['book_usd']), 2) }}
+                                    </td>
+                                    <td class="py-2.5 px-3 text-left font-mono text-slate-900 font-semibold whitespace-nowrap" dir="ltr">
+                                        {{ $item['current_usd'] < 0 ? '-' : '' }}${{ number_format(abs($item['current_usd']), 2) }}
+                                    </td>
+                                    <td class="py-2.5 px-3 text-left font-mono font-bold whitespace-nowrap {{ $item['fx_diff_usd'] > 0 ? 'text-brand-700' : ($item['fx_diff_usd'] < 0 ? 'text-rose-600' : 'text-slate-400') }}" dir="ltr">
+                                        {{ abs($item['fx_diff_usd']) >= 0.01 ? (($item['fx_diff_usd'] > 0 ? '+' : '-') . '$' . number_format(abs($item['fx_diff_usd']), 2)) : '$0.00' }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-slate-50 border-t border-slate-200 font-bold">
+                                <td colspan="5" class="py-2.5 px-3 text-slate-800">صافي أثر قيد إعادة التقييم على الأرباح والخسائر (4212 / 5311)</td>
+                                <td class="py-2.5 px-3 text-left font-mono whitespace-nowrap {{ $netAdj > 0 ? 'text-brand-700' : ($netAdj < 0 ? 'text-rose-600' : 'text-slate-500') }}" dir="ltr">
+                                    {{ abs($netAdj) >= 0.01 ? (($netAdj > 0 ? '+' : '-') . '$' . number_format(abs($netAdj), 2)) : '$0.00' }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            @else
+                <div class="p-4 text-xs text-slate-500 text-center">لا توجد أرصدة نقدية مفتوحة بالليرة السورية في دفتر الأستاذ تتطلب إعادة تقييم حالياً.</div>
+            @endif
+        </div>
+    @endif
+
     <!-- All Operations FX Audit Table -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">

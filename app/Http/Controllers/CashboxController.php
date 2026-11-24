@@ -2,25 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\CashMovement;
 use App\Models\Contact;
 use App\Services\AccountingService;
+use App\Services\DocumentPostingService;
+use Illuminate\Http\Request;
 
 class CashboxController extends Controller
 {
-    protected AccountingService $accountingService;
-
-    public function __construct(AccountingService $accountingService)
-    {
-        $this->accountingService = $accountingService;
-    }
+    public function __construct(
+        protected AccountingService $accountingService,
+        protected DocumentPostingService $posting,
+    ) {}
 
     public function index(Request $request)
     {
         $shop = current_shop();
-        $exchangeRate = (float)$shop->exchange_rate;
+        $exchangeRate = (float) $shop->exchange_rate;
 
         $query = CashMovement::with('contact')->latest('date');
 
@@ -61,17 +59,15 @@ class CashboxController extends Controller
         ]);
 
         $validated['shop_id'] = current_shop_id();
-        $validated['source_type'] = null;
-        $validated['source_id'] = null;
 
-        CashMovement::create($validated);
+        $this->posting->saveCashMovement($validated);
 
-        return redirect()->route('cashbox.index')->with('success', 'تم تسجيل سند الصندوق وتحديث الرصيد التراكمي.');
+        return redirect()->route('cashbox.index')->with('success', 'تم تسجيل سند الصندوق وترحيل قيده المحاسبي تلقائياً إلى دفتر الأستاذ.');
     }
 
     public function destroy(CashMovement $cashMovement)
     {
-        $cashMovement->delete();
-        return redirect()->route('cashbox.index')->with('success', 'تم حذف سند الصندوق بنجاح.');
+        $this->posting->destroyCashMovement($cashMovement);
+        return redirect()->route('cashbox.index')->with('success', 'تم حذف سند الصندوق وعكس أثره في دفتر الأستاذ.');
     }
 }

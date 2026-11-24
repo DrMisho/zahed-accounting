@@ -88,7 +88,7 @@
                 ['reports.pnl', 'الأرباح والخسائر', 'pnl', [], 'reports.pnl'],
                 ['reports.balance', 'الميزانية العمومية', 'balance', [], 'reports.balance'],
                 ['reports.fx', 'فروق صرف العملة', 'fx-diff', [], 'reports.fx'],
-                ['books.accounts', 'دليل الحسابات', 'accounts', [], 'books.accounts'],
+                ['books.accounts', 'شجرة الحسابات', 'accounts', [], 'books.accounts'],
                 ['books.ledger', 'الأستاذ العام', 'ledger', [], 'books.ledger'],
                 ['books.trial', 'ميزان المراجعة', 'trial', [], 'books.trial'],
                 ['reports.profitability', 'تحليل التكلفة والربحية', 'profitability', [], 'reports.profitability'],

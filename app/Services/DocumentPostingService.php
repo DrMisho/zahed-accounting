@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CashMovement;
 use App\Models\CurrencyExchange;
 use App\Models\EmployeeMovement;
 use App\Models\Expense;
@@ -11,7 +12,6 @@ use App\Models\ShippingExpense;
 use App\Models\Transaction;
 use App\Models\TransactionLine;
 use App\Models\Voucher;
-use Illuminate\Support\Facades\Auth;
 
 class DocumentPostingService
 {
@@ -70,15 +70,32 @@ class DocumentPostingService
             'date' => $tx->date,
             'type' => $type,
             'contact_id' => $tx->contact_id,
-            'category' => 'فاتورة '.$tx->invoice_number,
+            'category' => 'فاتورة ' . $tx->invoice_number,
             'amount' => $paid,
             'currency' => $tx->currency,
             'exchange_rate' => $tx->exchange_rate,
-            'notes' => 'أثر نقدي للفاتورة '.$tx->invoice_number,
+            'notes' => 'أثر نقدي للفاتورة ' . $tx->invoice_number,
             'voucher_number' => $tx->invoice_number,
             'affects_balance' => false,
             'document_ref' => $tx->invoice_number,
         ]);
+    }
+
+    public function saveCashMovement(array $data): CashMovement
+    {
+        $data['source_type'] = null;
+        $data['source_id'] = null;
+        $cm = CashMovement::create($data);
+        $this->journal->postCashMovement($cm->fresh());
+        return $cm;
+    }
+
+    public function destroyCashMovement(CashMovement $cm): void
+    {
+        if (!$cm->source_type) {
+            $this->journal->forgetSource($cm->shop_id, 'cash_movement', $cm->id);
+        }
+        $cm->delete();
     }
 
     public function saveExpense(array $data): Expense
@@ -96,7 +113,7 @@ class DocumentPostingService
             'affects_balance' => false,
         ]);
         $row->update(['cash_movement_id' => $cm->id]);
-        $this->journal->postSimple($row->shop_id, $row->date->format('Y-m-d'), $row->voucher_number ?: 'EXP-'.$row->id, 'expense', $row->id, $row->expense_type, 'expenses', $this->journal->cashRole($row->currency), (float) $row->amount, $row->currency, (float) $row->exchange_rate);
+        $this->journal->postExpense($row->fresh());
         return $row;
     }
 
@@ -106,7 +123,7 @@ class DocumentPostingService
         $cm = $this->cash->sync($row->shop_id, 'salary', $row->id, [
             'date' => $row->date,
             'type' => 'salary',
-            'category' => 'راتب '.$row->month,
+            'category' => 'راتب ' . $row->month,
             'amount' => $row->net,
             'currency' => $row->currency,
             'exchange_rate' => $row->exchange_rate,
@@ -115,11 +132,11 @@ class DocumentPostingService
             'affects_balance' => false,
         ]);
         $row->update(['cash_movement_id' => $cm->id]);
-        $this->journal->postSimple($row->shop_id, $row->date->format('Y-m-d'), $row->voucher_number ?: 'SAL-'.$row->id, 'salary', $row->id, 'راتب', 'salaries', $this->journal->cashRole($row->currency), (float) $row->net, $row->currency, (float) $row->exchange_rate);
+        $this->journal->postSalary($row->fresh('employee'));
         return $row;
     }
 
-    public function saveEmployeeMovement(array $data)
+    public function saveEmployeeMovement(array $data): EmployeeMovement
     {
         $row = EmployeeMovement::create($data);
         $cm = $this->cash->sync($row->shop_id, 'employee_movement', $row->id, [
@@ -134,6 +151,7 @@ class DocumentPostingService
             'affects_balance' => false,
         ]);
         $row->update(['cash_movement_id' => $cm->id]);
+        $this->journal->postEmployeeMovement($row->fresh('employee'));
         return $row;
     }
 
@@ -152,7 +170,7 @@ class DocumentPostingService
             'affects_balance' => false,
         ]);
         $row->update(['cash_movement_id' => $cm->id]);
-        $this->journal->postSimple($row->shop_id, $row->date->format('Y-m-d'), $row->voucher_number ?: 'WD-'.$row->id, 'withdrawal', $row->id, 'مسحوبات', 'withdrawals', $this->journal->cashRole($row->currency), (float) $row->amount, $row->currency, (float) $row->exchange_rate);
+        $this->journal->postWithdrawal($row->fresh('partner'));
         return $row;
     }
 
@@ -165,6 +183,7 @@ class DocumentPostingService
         } else {
             $row = Voucher::create($data);
         }
+
         if ($row->affects_balance) {
             $cm = $this->cash->sync($row->shop_id, 'voucher', $row->id, [
                 'date' => $row->date,
@@ -180,19 +199,19 @@ class DocumentPostingService
                 'document_ref' => $row->original_ref,
             ]);
             $row->update(['cash_movement_id' => $cm->id]);
-            $debit = $row->type === 'receipt' ? $this->journal->cashRole($row->currency) : $this->journal->apRole($row->currency);
-            $credit = $row->type === 'receipt' ? $this->journal->arRole($row->currency) : $this->journal->cashRole($row->currency);
-            $this->journal->postSimple($row->shop_id, $row->date->format('Y-m-d'), $row->number, 'voucher', $row->id, $row->description ?: $row->number, $debit, $credit, (float) $row->amount, $row->currency, (float) $row->exchange_rate);
+            $this->journal->postVoucher($row->fresh());
         } else {
             $row->update(['cash_movement_id' => null]);
+            $this->journal->forgetSource($row->shop_id, 'voucher', $row->id);
         }
+
         return $row;
     }
 
     public function saveCurrencyExchange(array $data): CurrencyExchange
     {
         $row = CurrencyExchange::create($data);
-        $ref = $row->reference_number ?: 'EX-'.$row->id;
+        $ref = $row->reference_number ?: 'EX-' . $row->id;
 
         $outCm = $this->cash->sync($row->shop_id, 'currency_exchange_out', $row->id, [
             'date' => $row->date,

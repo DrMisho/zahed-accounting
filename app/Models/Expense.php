@@ -12,7 +12,7 @@ class Expense extends Model
     use HasShop;
 
     protected $fillable = [
-        'shop_id', 'date', 'voucher_number', 'expense_type', 'description', 'amount', 'currency',
+        'shop_id', 'date', 'voucher_number', 'expense_type', 'account_id', 'description', 'amount', 'currency',
         'exchange_rate', 'amount_usd', 'payment_method', 'cost_center_id', 'notes', 'cash_movement_id',
     ];
 
@@ -28,6 +28,11 @@ class Expense extends Model
         static::saving(function (Expense $row) {
             $row->amount_usd = Money::toUsd((float) $row->amount, $row->currency, (float) $row->exchange_rate);
         });
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
     }
 
     public function costCenter(): BelongsTo

@@ -2,28 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Services\AccountingService;
 use App\Models\Transaction;
-use App\Models\Item;
-use App\Models\Contact;
-use App\Models\Shop;
+use App\Services\AccountingService;
+use App\Services\JournalService;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    protected AccountingService $accountingService;
-
-    public function __construct(AccountingService $accountingService)
-    {
-        $this->accountingService = $accountingService;
-    }
+    public function __construct(
+        protected AccountingService $accountingService,
+        protected JournalService $journalService,
+    ) {}
 
     public function index()
     {
         $user = Auth::user();
 
-        // السوبر أدمن يتم تحويله للوحة المنصة إذا لم يكن يتفحص متجراً
         if ($user->hasRole('super_admin') && !session()->has('impersonated_shop_id')) {
             return redirect()->route('admin.shops');
         }
@@ -33,12 +27,14 @@ class DashboardController extends Controller
             abort(403, 'المستخدم غير مرتبط بأي متجر تجاري.');
         }
 
-        $exchangeRate = (float)$shop->exchange_rate;
+        $exchangeRate = (float) $shop->exchange_rate;
+        $this->journalService->ensureSeededFromOperations($shop->id, $this->accountingService);
+
         $cashbox = $this->accountingService->getCashboxSummary($shop->id, $exchangeRate);
         $stockReports = $this->accountingService->getInventoryValuation($shop->id);
-        $pnl = $this->accountingService->getProfitAndLossReport($shop->id);
+        $pnl = $this->journalService->getGlProfitAndLoss($shop->id, $exchangeRate);
 
-        $lowStockItems = array_filter($stockReports, fn($sr) => $sr['is_low_stock']);
+        $lowStockItems = array_filter($stockReports, fn ($sr) => $sr['is_low_stock']);
         $recentTransactions = Transaction::with(['contact', 'item'])
             ->latest('date')
             ->take(5)
