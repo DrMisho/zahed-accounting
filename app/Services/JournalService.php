@@ -58,6 +58,15 @@ class JournalService
         return $shopRate > 0 ? $shopRate : 14500.0;
     }
 
+    private function formatDate(mixed $date): string
+    {
+        if ($date instanceof \DateTimeInterface) {
+            return $date->format('Y-m-d');
+        }
+        $str = trim((string) $date);
+        return $str !== '' ? substr($str, 0, 10) : date('Y-m-d');
+    }
+
     public function accountId(string $shopId, string $role): ?int
     {
         $id = AccountMapping::withoutGlobalScopes()
@@ -301,7 +310,7 @@ class JournalService
             }
         }
 
-        $this->writeEntry($tx->shop_id, $tx->date->format('Y-m-d'), $tx->invoice_number, 'transaction', $tx->id, $desc, $lines);
+        $this->writeEntry($tx->shop_id, $this->formatDate($tx->date), $tx->invoice_number, 'transaction', $tx->id, $desc, $lines);
     }
 
     public function postVoucher(Voucher $voucher): void
@@ -341,7 +350,7 @@ class JournalService
             ];
         }
 
-        $this->writeEntry($voucher->shop_id, $voucher->date->format('Y-m-d'), $voucher->number, 'voucher', $voucher->id, $desc, $lines);
+        $this->writeEntry($voucher->shop_id, $this->formatDate($voucher->date), $voucher->number, 'voucher', $voucher->id, $desc, $lines);
     }
 
     public function postCashMovement(CashMovement $cm): void
@@ -408,7 +417,7 @@ class JournalService
             ];
         }
 
-        $this->writeEntry($cm->shop_id, $cm->date->format('Y-m-d'), $doc, 'cash_movement', $cm->id, $desc, $lines);
+        $this->writeEntry($cm->shop_id, $this->formatDate($cm->date), $doc, 'cash_movement', $cm->id, $desc, $lines);
     }
 
     public function postExpense(Expense $expense): void
@@ -439,7 +448,7 @@ class JournalService
             $this->lineByRole($this->cashRole($cur), 0, $usd, $desc, $cur, $rate, 0, $amount, null, $ccId),
         ];
 
-        $this->writeEntry($expense->shop_id, $expense->date->format('Y-m-d'), $doc, 'expense', $expense->id, $desc, $lines);
+        $this->writeEntry($expense->shop_id, $this->formatDate($expense->date), $doc, 'expense', $expense->id, $desc, $lines);
     }
 
     public function postShippingExpense(ShippingExpense $shipping): void
@@ -468,7 +477,7 @@ class JournalService
             $this->lineByRole($this->cashRole($cur), 0, $usd, $desc, $cur, $rate, 0, $amount),
         ];
 
-        $this->writeEntry($shipping->shop_id, $shipping->date->format('Y-m-d'), $doc, 'shipping_expense', $shipping->id, $desc, $lines);
+        $this->writeEntry($shipping->shop_id, $this->formatDate($shipping->date), $doc, 'shipping_expense', $shipping->id, $desc, $lines);
     }
 
     public function postSalary(SalaryRecord $salary): void
@@ -496,7 +505,7 @@ class JournalService
             $this->lineByRole($this->cashRole($cur), 0, $usd, $desc, $cur, $rate, 0, $amount),
         ];
 
-        $this->writeEntry($salary->shop_id, $salary->date->format('Y-m-d'), $doc, 'salary', $salary->id, $desc, $lines);
+        $this->writeEntry($salary->shop_id, $this->formatDate($salary->date), $doc, 'salary', $salary->id, $desc, $lines);
     }
 
     public function postEmployeeMovement(EmployeeMovement $move): void
@@ -525,7 +534,7 @@ class JournalService
             $this->lineByRole($this->cashRole($cur), 0, $usd, $desc, $cur, $rate, 0, $amount),
         ];
 
-        $this->writeEntry($move->shop_id, $move->date->format('Y-m-d'), $doc, 'employee_movement', $move->id, $desc, $lines);
+        $this->writeEntry($move->shop_id, $this->formatDate($move->date), $doc, 'employee_movement', $move->id, $desc, $lines);
     }
 
     public function postWithdrawal(PartnerWithdrawal $withdrawal): void
@@ -553,7 +562,7 @@ class JournalService
             $this->lineByRole($this->cashRole($cur), 0, $usd, $desc, $cur, $rate, 0, $amount),
         ];
 
-        $this->writeEntry($withdrawal->shop_id, $withdrawal->date->format('Y-m-d'), $doc, 'withdrawal', $withdrawal->id, $desc, $lines);
+        $this->writeEntry($withdrawal->shop_id, $this->formatDate($withdrawal->date), $doc, 'withdrawal', $withdrawal->id, $desc, $lines);
     }
 
     public function postCurrencyExchange(CurrencyExchange $exchange): void
@@ -605,7 +614,7 @@ class JournalService
             }
         }
 
-        $this->writeEntry($exchange->shop_id, $exchange->date->format('Y-m-d'), $doc, 'currency_exchange', $exchange->id, $desc, $lines);
+        $this->writeEntry($exchange->shop_id, $this->formatDate($exchange->date), $doc, 'currency_exchange', $exchange->id, $desc, $lines);
     }
 
     public function postSimple(
@@ -735,7 +744,7 @@ class JournalService
 
         if (!empty($openingLines)) {
             $firstDate = Transaction::withoutGlobalScopes()->where('shop_id', $shopId)->min('date') ?: date('Y-m-d');
-            $this->writeEntry($shopId, (string) $firstDate, 'OPEN-SYNC', 'opening_sync', 1, 'قيد الأرصدة الافتتاحية (المخزون والذمم)', $openingLines);
+            $this->writeEntry($shopId, $this->formatDate($firstDate), 'OPEN-SYNC', 'opening_sync', 1, 'قيد الأرصدة الافتتاحية (المخزون والذمم)', $openingLines);
         }
 
         // 2. Repost all operational documents in order
@@ -955,10 +964,10 @@ class JournalService
 
         $this->writeEntry(
             $shopId,
-            $date,
+            $this->formatDate($date),
             $doc,
             'fx_revaluation',
-            (int) date('YmdHis'),
+            time(),
             'قيد إعادة تقييم أرصدة العملة الثانوية (ل.س) إلى الدولار على سعر ' . number_format($rate),
             $lines
         );
@@ -1278,7 +1287,7 @@ class JournalService
             ->when($accountIds, fn ($q) => $q->whereIn('account_id', $accountIds))
             ->get()
             ->filter(fn ($line) => $line->account && $line->entry)
-            ->sortBy(fn ($line) => $line->entry->date->format('Y-m-d') . '-' . str_pad((string) $line->journal_entry_id, 10, '0', STR_PAD_LEFT) . '-' . str_pad((string) $line->id, 10, '0', STR_PAD_LEFT));
+            ->sortBy(fn ($line) => $this->formatDate($line->entry->date) . '-' . str_pad((string) $line->journal_entry_id, 10, '0', STR_PAD_LEFT) . '-' . str_pad((string) $line->id, 10, '0', STR_PAD_LEFT));
 
         $openingCarry = [];
         if ($accountIds) {
@@ -1293,7 +1302,7 @@ class JournalService
         $totalCredit = 0.0;
 
         foreach ($query as $line) {
-            $entryDate = $line->entry->date->format('Y-m-d');
+            $entryDate = $this->formatDate($line->entry->date);
             if ($to && $entryDate > $to) {
                 continue;
             }
@@ -1612,6 +1621,7 @@ class JournalService
 
         $totalExpenses = 0.0;
         $totalSalaries = 0.0;
+        $totalWithdrawals = 0.0;
         $otherRevenues = 0.0;
         $fxGain = 0.0;
         $fxLoss = 0.0;
@@ -1627,6 +1637,10 @@ class JournalService
         foreach ($balances as $row) {
             /** @var Account $acc */
             $acc = $row['account'];
+            if ($acc->system_key === 'withdrawals') {
+                $totalWithdrawals += max(0.0, round((float) $row['signed_usd'], 2));
+                continue;
+            }
             if ($acc->statement_type !== 'pnl') {
                 continue;
             }
@@ -1696,6 +1710,7 @@ class JournalService
             'other_revenues_usd' => round($otherRevenues, 2),
             'total_expenses_usd' => round($totalExpenses, 2),
             'total_salaries_usd' => round($totalSalaries, 2),
+            'total_withdrawals_usd' => round($totalWithdrawals, 2),
             'fx_diff_usd' => $fxDiff,
             'fx_gain_usd' => round($fxGain, 2),
             'fx_loss_usd' => round($fxLoss, 2),

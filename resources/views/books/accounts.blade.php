@@ -125,6 +125,16 @@
                                 default => 'text-slate-700 hover:bg-slate-50/70',
                             };
                             $indentPx = $depth * 22;
+                            $editPayload = [
+                                'id' => $acc->id,
+                                'code' => $acc->code,
+                                'name' => $acc->name,
+                                'classification' => $acc->classification ?? '',
+                                'currency' => $acc->currency ?: 'USD',
+                                'opening_debit' => (float) $acc->opening_debit,
+                                'opening_credit' => (float) $acc->opening_credit,
+                                'update_url' => route('books.accounts.update', $acc),
+                            ];
                         @endphp
                         <tr class="coa-row {{ $rowBg }}"
                             data-id="{{ $acc->id }}"
@@ -174,10 +184,15 @@
                                         <button type="button" onclick="openAccountModal({{ $acc->id }})" class="text-slate-600 hover:text-brand-700 font-semibold">+ فرعي</button>
                                     @else
                                         <button type="button"
-                                                onclick='openEditAccountModal(@json(["id" => $acc->id, "code" => $acc->code, "name" => $acc->name, "classification" => $acc->classification, "currency" => $acc->currency ?: "USD", "opening_debit" => (float) $acc->opening_debit, "opening_credit" => (float) $acc->opening_credit]))'
+                                                data-account='@json($editPayload)'
+                                                onclick="openEditAccountModal(this)"
                                                 class="text-slate-600 hover:text-brand-700 font-semibold">تعديل</button>
                                         @if(!$acc->is_system && $node['lines_count'] === 0)
-                                            <form method="POST" action="{{ route('books.accounts.destroy', $acc) }}" onsubmit="return confirm('حذف الحساب {{ $acc->name }}؟')" class="inline">
+                                            <form method="POST"
+                                                  action="{{ route('books.accounts.destroy', $acc) }}"
+                                                  data-confirm-name="{{ $acc->name }}"
+                                                  onsubmit="return confirm('حذف الحساب ' + this.dataset.confirmName + '؟')"
+                                                  class="inline">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="text-rose-600 hover:underline font-semibold">حذف</button>
@@ -331,10 +346,12 @@
         document.getElementById('add-account-modal').classList.add('hidden');
     }
 
-    function openEditAccountModal(acc) {
+    function openEditAccountModal(triggerEl) {
+        const raw = triggerEl && triggerEl.getAttribute ? triggerEl.getAttribute('data-account') : null;
+        const acc = raw ? JSON.parse(raw) : (triggerEl || {});
         const form = document.getElementById('edit-account-form');
-        form.action = '/books/accounts/' + acc.id;
-        document.getElementById('edit-code-label').textContent = acc.code;
+        form.action = acc.update_url || ('/books/accounts/' + acc.id);
+        document.getElementById('edit-code-label').textContent = acc.code || '';
         document.getElementById('edit-name').value = acc.name || '';
         document.getElementById('edit-classification').value = acc.classification || '';
         document.getElementById('edit-currency').value = acc.currency || 'USD';
