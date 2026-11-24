@@ -12,8 +12,8 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['IBM Plex Sans Arabic', 'Cairo', ...defaultTheme.fontFamily.sans],
-                mono: ['JetBrains Mono', ...defaultTheme.fontFamily.mono],
+                sans: ['Cairo', ...defaultTheme.fontFamily.sans],
+                mono: ['Cairo', ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 brand: {

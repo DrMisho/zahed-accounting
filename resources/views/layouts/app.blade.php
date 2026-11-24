@@ -10,7 +10,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     @include('layouts.partials.theme')
@@ -55,10 +55,7 @@
                     <img src="{{ asset('images/logo-mark.png') }}?v=2" alt="زاهد للحلول المالية">
                     <div class="print-brand-text">
                         <div class="print-system-name">زاهد للحلول المالية</div>
-                        <div class="print-phone">
-                            <span>للتواصل:</span>
-                            <span class="font-mono" dir="ltr">0984393644</span>
-                        </div>
+                        <div class="print-phone font-mono" dir="ltr">0984393644</div>
                     </div>
                 </div>
                 <div class="print-meta">

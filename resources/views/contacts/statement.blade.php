@@ -69,10 +69,7 @@
             <img src="{{ asset('images/logo-mark.png') }}?v=2" alt="زاهد للحلول المالية" class="h-14 w-14 sm:h-16 sm:w-16 object-contain shrink-0">
             <div class="text-right">
                 <div class="text-base sm:text-lg font-extrabold text-brand-950 leading-snug">زاهد للحلول المالية</div>
-                <div class="text-xs font-semibold text-brand-800 mt-0.5">
-                    <span>للتواصل:</span>
-                    <span class="font-mono inline-block mr-1" dir="ltr">0984393644</span>
-                </div>
+                <div class="text-xs font-mono font-semibold text-brand-800 mt-0.5 text-right" dir="ltr">0984393644</div>
             </div>
         </div>
         <div class="text-left">

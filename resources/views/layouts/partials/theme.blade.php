@@ -3,8 +3,8 @@
         theme: {
             extend: {
                 fontFamily: {
-                    sans: ['IBM Plex Sans Arabic', 'Cairo', 'sans-serif'],
-                    mono: ['JetBrains Mono', 'monospace'],
+                    sans: ['Cairo', 'sans-serif'],
+                    mono: ['Cairo', 'sans-serif'],
                 },
                 colors: {
                     brand: {
@@ -38,8 +38,8 @@
     }
 </script>
 <style>
-    html { -webkit-text-size-adjust: 100%; }
-    body { overflow-x: hidden; background-color: #F3F6F4; }
+    html { -webkit-text-size-adjust: 100%; font-family: 'Cairo', sans-serif; }
+    body { overflow-x: hidden; background-color: #F3F6F4; font-family: 'Cairo', sans-serif; }
     main { min-width: 0; }
     main .overflow-x-auto { -webkit-overflow-scrolling: touch; }
     .font-mono { font-variant-numeric: tabular-nums; }
@@ -129,9 +129,7 @@
             font-weight: 600;
             color: #065F46;
             margin-top: 2px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            text-align: right;
         }
         .print-letterhead .print-meta {
             text-align: left;
@@ -148,7 +146,8 @@
         .print-letterhead .print-date {
             font-size: 10px;
             color: #64748b;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Cairo', sans-serif;
+            font-variant-numeric: tabular-nums;
         }
         .print-dev-credit {
             display: block !important;
