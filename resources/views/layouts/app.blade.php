@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'زاهد للحلول المحاسبية والمالية') }} - @yield('title', 'لوحة التحكم')</title>
+    <title>زاهد للحلول المالية - @yield('title', 'لوحة التحكم')</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo-mark.png') }}?v=2">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,11 +49,26 @@
     <!-- Main Workspace Area -->
     <div class="flex-1 min-w-0 flex flex-col min-h-screen">
         @sectionMissing('custom_print_chrome')
-            <!-- Print-Only Letterhead -->
-            <div class="print-letterhead">
-                <img src="{{ asset('images/logo-mark.png') }}?v=2" alt="زاهد للحلول المحاسبية والمالية">
-                <div class="shop-name">
-                    {{ current_shop()->name ?? config('app.name', 'زاهد للحلول المحاسبية والمالية') }}
+            <!-- Unified Print-Only Letterhead (Logo on Right + System Name + Contact Phone) -->
+            <div class="print-letterhead" dir="rtl">
+                <div class="print-brand">
+                    <img src="{{ asset('images/logo-mark.png') }}?v=2" alt="زاهد للحلول المالية">
+                    <div class="print-brand-text">
+                        <div class="print-system-name">زاهد للحلول المالية</div>
+                        <div class="print-phone">
+                            <span>للتواصل:</span>
+                            <span class="font-mono" dir="ltr">0984393644</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="print-meta">
+                    @if(current_shop())
+                        <div class="shop-name">{{ current_shop()->name }}</div>
+                        @if(current_shop()->phone)
+                            <div class="font-mono" dir="ltr">{{ current_shop()->phone }}</div>
+                        @endif
+                    @endif
+                    <div class="print-date" dir="ltr">{{ now()->format('Y-m-d H:i') }}</div>
                 </div>
             </div>
         @endif
@@ -141,7 +156,7 @@
         <footer class="site-footer bg-white border-t border-slate-200/80 py-4 px-4 sm:px-6 mt-auto text-xs text-slate-500">
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
                 <div class="flex items-center gap-2.5">
-                    <strong class="text-slate-700">زاهد للحلول المحاسبية والمالية</strong>
+                    <strong class="text-slate-700">زاهد للحلول المالية</strong>
                     <span class="text-slate-300" aria-hidden="true">·</span>
                     <span class="font-mono text-slate-500" dir="ltr">0984393644</span>
                 </div>

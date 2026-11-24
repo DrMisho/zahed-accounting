@@ -63,10 +63,17 @@
 
 @section('content')
 <div class="statement-sheet max-w-4xl mx-auto bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-6">
-    <!-- Top Row: Zahed Logo on the Right Only (no Zahed name or client name in top header) -->
-    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
-        <div class="flex items-center">
-            <img src="{{ asset('images/logo-mark.png') }}?v=2" alt="شعار زاهد" class="h-16 w-16 object-contain">
+    <!-- Top Row: Logo on the Right + System Name + Contact Phone -->
+    <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div class="flex items-center gap-3">
+            <img src="{{ asset('images/logo-mark.png') }}?v=2" alt="زاهد للحلول المالية" class="h-14 w-14 sm:h-16 sm:w-16 object-contain shrink-0">
+            <div class="text-right">
+                <div class="text-base sm:text-lg font-extrabold text-brand-950 leading-snug">زاهد للحلول المالية</div>
+                <div class="text-xs font-semibold text-brand-800 mt-0.5">
+                    <span>للتواصل:</span>
+                    <span class="font-mono inline-block mr-1" dir="ltr">0984393644</span>
+                </div>
+            </div>
         </div>
         <div class="text-left">
             <span class="inline-block text-xs font-semibold text-slate-500">
@@ -263,7 +270,7 @@
             <div class="table-row">
                 <!-- Right: Zahed System Name + Phone Number Underneath -->
                 <div class="table-cell align-bottom text-right">
-                    <div class="text-xs font-bold text-slate-800">نظام زاهد للحلول المحاسبية والمالية</div>
+                    <div class="text-xs font-bold text-slate-800">زاهد للحلول المالية</div>
                     <div class="text-[11px] font-mono font-semibold text-slate-700 mt-0.5 text-right" dir="ltr">0984393644</div>
                 </div>
 

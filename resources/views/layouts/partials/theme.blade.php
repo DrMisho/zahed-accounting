@@ -96,14 +96,60 @@
         body { background: #fff !important; overflow: visible !important; padding-bottom: 22px !important; }
         main { max-width: none !important; padding: 0 0 22px !important; }
         .print-letterhead {
-            display: block !important;
-            text-align: center;
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            direction: rtl;
+            text-align: right;
             margin: 0 0 18px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 12px;
+            border-bottom: 1.5px solid #cbd5e1;
         }
-        .print-letterhead img { height: 72px; width: auto; margin: 0 auto; }
-        .print-letterhead .shop-name { font-size: 13px; font-weight: 700; color: #064E3B; margin-top: 4px; }
+        .print-letterhead .print-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .print-letterhead img {
+            height: 60px;
+            width: 60px;
+            object-fit: contain;
+            margin: 0;
+            flex-shrink: 0;
+        }
+        .print-letterhead .print-system-name {
+            font-size: 16px;
+            font-weight: 800;
+            color: #04241D;
+            line-height: 1.3;
+        }
+        .print-letterhead .print-phone {
+            font-size: 11px;
+            font-weight: 600;
+            color: #065F46;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .print-letterhead .print-meta {
+            text-align: left;
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.5;
+        }
+        .print-letterhead .shop-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #064E3B;
+            margin-top: 0;
+        }
+        .print-letterhead .print-date {
+            font-size: 10px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+        }
         .print-dev-credit {
             display: block !important;
             position: fixed;
